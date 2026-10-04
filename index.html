@@ -1053,7 +1053,7 @@ const EQUIPOS = {
   },
   infantil:   {
     nombre:'Infantil F-11', detalle:'Sub 13 Preferente Mallorca', id:'InfantilF11',
-    entrenador:'Joaquín Bagur', password:'e014e92c793943d18266fd794b2d3564d2271b52a886ca397a04181e7e4cb785', jugadores:[],
+    entrenador:'Joaquín Bagur', password:'b0707af0bd264604f0a9df0bbc10fedfa35d1024cab1b0e02d26ff2b2bfa785f', jugadores:[],
     horarios:'Mar · Campo D · 17:30–19:00 | Jue · Campo D · 17:30–19:00 | Vie · Campo C y D · 17:30–19:00'
   },
   alevinA:    {
@@ -2695,7 +2695,23 @@ const CALENDARIOS = {
     [13, '2027-01-30', 'CALVIA'                              , 'SANTA PONSA CF'                      , '']
   ].map(x => ({ j: x[0], fecha: x[1], local: x[2], visitante: x[3], campo: x[4] }))
 };
+CALENDARIOS.InfantilF11 = [
+    [1 , '2026-10-11', 'PATRONATO'                   , 'SANTA PONSA CF'              , ''],
+    [2 , '2026-10-18', 'SANTA PONSA CF'              , 'SANTA MÒNICA'                , 'P.M. Santa Ponsa F-11'],
+    [3 , '2026-10-25', 'SON CLADERA'                 , 'SANTA PONSA CF'              , ''],
+    [4 , '2026-11-01', 'SANTA PONSA CF'              , 'JOVENTUT MALLORCA'           , 'P.M. Santa Ponsa F-11'],
+    [5 , '2026-11-08', 'LA REAL'                     , 'SANTA PONSA CF'              , ''],
+    [6 , '2026-11-15', 'SANTA PONSA CF'              , 'ANDRATX'                     , 'P.M. Santa Ponsa F-11'],
+    [7 , '2026-11-22', 'GENOVA'                      , 'SANTA PONSA CF'              , ''],
+    [8 , '2026-11-29', 'SANTA PONSA CF'              , 'SAN CAYETANO'                , 'P.M. Santa Ponsa F-11'],
+    [9 , '2026-12-13', 'SAN PEDRO ATº D.C.S.P.'      , 'SANTA PONSA CF'              , ''],
+    [10, '2026-12-20', 'SANTA PONSA CF'              , 'Descansa'                    , ''],
+    [11, '2027-01-10', 'SANTA PONSA CF'              , 'ESTUDIANTES DEL CIDE'        , 'P.M. Santa Ponsa F-11'],
+    [12, '2027-01-17', 'ES RAVAL DE STA. C.'         , 'SANTA PONSA CF'              , ''],
+    [13, '2027-01-24', 'SANTA PONSA CF'              , 'SON SARDINA RECREATIU'       , 'P.M. Santa Ponsa F-11']
+].map(x => ({ j: x[0], fecha: x[1], local: x[2], visitante: x[3], campo: x[4] }));
 const CAL_COMPETICION = {
+  InfantilF11: 'Liga Infantil · Temporada 2026-2027',
   BenjaminC: 'Liga Benjamín · Temporada 2026-2027',
   AlevinA: 'Fase clasificación Alevín 1ª Regional Mallorca · Grupo A · Temporada 2026-2027'
 };
@@ -2722,6 +2738,7 @@ async function cargarResultados() {
 }
 
 function rivalDe(p) { return p.local === NOMBRE_CLUB_CAL ? p.visitante : p.local; }
+function esDescanso(p) { return /^descansa$/i.test(rivalDe(p)); }
 function enCasa(p) { return p.local === NOMBRE_CLUB_CAL; }
 function signoResultado(p, r) {
   const m = String(r || '').match(/^\s*(\d+)\s*[-–]\s*(\d+)\s*$/); if (!m) return null;
@@ -2732,7 +2749,7 @@ function signoResultado(p, r) {
 function pintarCalendario() {
   const cal = calendarioActual(), box = document.getElementById('cal-lista'); if (!cal || !box) return;
   const hoy = new Date().toISOString().slice(0, 10);
-  const prox = cal.find(p => p.fecha >= hoy);
+  const prox = cal.find(p => p.fecha >= hoy && !esDescanso(p));
   let v = 0, e = 0, d = 0, gf = 0, gc = 0;
   cal.forEach(p => {
     const r = (_resultados[p.j] || {}).resultado, s = signoResultado(p, r); if (!s) return;
@@ -2744,6 +2761,8 @@ function pintarCalendario() {
       .map(k => `<div style="flex:1;min-width:70px;background:${k[2]};border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;color:#6B7280;font-weight:700">${k[0].toUpperCase()}</div><div style="font-size:16px;font-weight:900;color:${k[3]}">${k[1]}</div></div>`).join('')}</div>` : '';
   const fmt = f => new Date(f + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
   box.innerHTML = cal.map(p => {
+    if (esDescanso(p)) return `<div style="border:1px dashed #D1D5DB;border-radius:8px;padding:9px 11px;margin-bottom:8px;background:#F9FAFB;font-size:12px;color:#6B7280">
+      <b style="color:#1C2B4A">Jornada ${p.j}</b> · ${fmt(p.fecha)} · 😴 <b>Jornada de descanso</b> (no hay partido)</div>`;
     const r = (_resultados[p.j] || {}).resultado || '', s = signoResultado(p, r);
     const col = s === 'V' ? '#065F46' : s === 'E' ? '#B45309' : s === 'D' ? '#991B1B' : '#9CA3AF';
     const esProx = prox && prox.j === p.j;
