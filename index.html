@@ -276,7 +276,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <span class="eq-icon"><span class="escudo-mini"></span></span>
         <div class="eq-info">
           <div class="eq-name">Benjamín C <span style="font-size:10px;background:var(--verde-p);color:var(--verde);padding:1px 6px;border-radius:10px;font-weight:700;margin-left:4px">✓ Configurado</span></div>
-          <div class="eq-detail">Mar/Jue/Vie · Entrenador: Javier P.</div>
+          <div class="eq-detail">Entrenador: Javier Pozo Muñoz · 13 jugadores · Mar/Jue/Vie</div>
         </div><span class="eq-arrow">›</span>
       </button>
       <button class="eq-btn" onclick="abrirEquipo('benjaminD')">
@@ -378,6 +378,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="card">
         <div class="card-title p">📅 Calendario y resultados · Santa Ponsa CF</div>
         <div id="cal-comp" style="font-size:11px;font-weight:700;color:#C2410C;margin:-4px 0 6px"></div>
+        <a id="cal-ffib" href="#" target="_blank" rel="noopener" style="display:none;font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:8px">🌐 Ver resultados y clasificación en la web de la Federación</a>
         <div style="font-size:11px;color:#6B7280;margin-bottom:8px">Pulsa <b>📣 Convocatoria</b> para preparar la convocatoria de ese partido, o <b>📋 Alineación</b> para registrar la participación. El resultado se escribe como <b>goles local - goles visitante</b>.</div>
         <div id="cal-resumen" style="margin-bottom:10px"></div>
         <div id="cal-lista"></div>
@@ -1082,7 +1083,7 @@ const EQUIPOS = {
   },
   benjaminC:  {
     nombre:'Benjamín C', detalle:'Benjamines Mallorca', id:'BenjaminC',
-    entrenador:'Javier P.', password:'1d97a7026ed3005fc8ec7525276f9512d28091653550177c9e1f78975a3e78b2',
+    entrenador:'Javier Pozo Muñoz', password:'1d97a7026ed3005fc8ec7525276f9512d28091653550177c9e1f78975a3e78b2',
     jugadores:['Javi V.','Erik T.','Andreas C. M.','Cristian D.','Maddox M.','Mattias M.','Adam C.','Salah A. J. W.','Lorenzo W.','José Luis V. C.','Martín A.','Adrián M.','Antonio S.'],
     horarios:'Mar · Campo C · 17:30–19:00 | Jue · Campo B · 17:30–19:00 | Vie · Sin campo · 17:30–19:00'
   },
@@ -2710,7 +2711,56 @@ CALENDARIOS.InfantilF11 = [
     [12, '2027-01-17', 'ES RAVAL DE STA. C.'         , 'SANTA PONSA CF'              , ''],
     [13, '2027-01-24', 'SANTA PONSA CF'              , 'SON SARDINA RECREATIU'       , 'P.M. Santa Ponsa F-11']
 ].map(x => ({ j: x[0], fecha: x[1], local: x[2], visitante: x[3], campo: x[4] }));
+CALENDARIOS.Juvenil = [
+    [1 , '2026-10-11', 'SANT JORDI'                  , 'SANTA PONSA CF'              , ''],
+    [2 , '2026-10-18', 'SANTA PONSA CF'              , 'FELANITX'                    , 'P.M. Santa Ponsa F-11'],
+    [3 , '2026-10-25', 'RTVº. SON CALIU'             , 'SANTA PONSA CF'              , ''],
+    [4 , '2026-11-01', 'SANTA PONSA CF'              , 'VIVA SPORTS'                 , 'P.M. Santa Ponsa F-11'],
+    [5 , '2026-11-08', 'RTVº LA VICTORIA'            , 'SANTA PONSA CF'              , ''],
+    [6 , '2026-11-15', 'SANTA PONSA CF'              , 'S D LA SALLE ATº'            , 'P.M. Santa Ponsa F-11'],
+    [7 , '2026-11-22', 'LA UNION'                    , 'SANTA PONSA CF'              , ''],
+    [8 , '2026-11-29', 'SANTA PONSA CF'              , 'SON SARDINA "B"'             , 'P.M. Santa Ponsa F-11'],
+    [9 , '2026-12-06', 'SANTA PONSA CF'              , 'ALCUDIA "C"'                 , 'P.M. Santa Ponsa F-11'],
+    [10, '2026-12-13', 'PLATGES DE CALVIA "B"'       , 'SANTA PONSA CF'              , ''],
+    [11, '2026-12-20', 'SANTA PONSA CF'              , 'PLA DE NA TESA "B"'          , 'P.M. Santa Ponsa F-11'],
+    [12, '2027-01-10', 'URBANITZACIONS "B"'          , 'SANTA PONSA CF'              , ''],
+    [13, '2027-01-17', 'SANTA PONSA CF'              , 'RECREATIVO SANTA CATALINA'   , 'P.M. Santa Ponsa F-11'],
+    [14, '2027-01-24', 'SP. SANT MARÇAL'             , 'SANTA PONSA CF'              , ''],
+    [15, '2027-01-31', 'SANTA PONSA CF'              , 'MONTAURA'                    , 'P.M. Santa Ponsa F-11']
+].map(x => ({ j: x[0], fecha: x[1], local: x[2], visitante: x[3], campo: x[4] }));
+CALENDARIOS.BenjaminA = [
+    [1 , '2026-10-03', 'CONSTANCIA "A"'            , 'SANTA PONSA CF "A"'        , ''],
+    [2 , '2026-10-10', 'SANTA PONSA CF "A"'        , 'SAN FRANCISCO'             , 'P.M. Santa Ponsa F-7 A'],
+    [3 , '2026-10-17', 'MANACOR "A"'               , 'SANTA PONSA CF "A"'        , ''],
+    [4 , '2026-10-24', 'SANTA PONSA CF "A"'        , 'RTVº. SON CALIU "A"'       , 'P.M. Santa Ponsa F-7 A'],
+    [5 , '2026-10-31', 'CE ESPANYA "A"'            , 'SANTA PONSA CF "A"'        , ''],
+    [6 , '2026-11-07', 'SANTA PONSA CF "A"'        , 'CE ES PLA "A"'             , 'P.M. Santa Ponsa F-7 A'],
+    [7 , '2026-11-14', 'SAN CAYETANO "A"'          , 'SANTA PONSA CF "A"'        , ''],
+    [8 , '2026-11-21', 'SANTA PONSA CF "A"'        , 'MADRE ALBERTA "A"'         , 'P.M. Santa Ponsa F-7 A'],
+    [9 , '2026-11-28', 'SANTA PONSA CF "A"'        , 'PENYA ARRABAL'             , 'P.M. Santa Ponsa F-7 A'],
+    [10, '2026-12-12', 'ATº BALEARES "A"'          , 'SANTA PONSA CF "A"'        , ''],
+    [11, '2026-12-19', 'SANTA PONSA CF "A"'        , 'FERRIOLENSE "A"'           , 'P.M. Santa Ponsa F-7 A'],
+    [12, '2027-01-09', 'LA UNIÓN "A"'              , 'SANTA PONSA CF "A"'        , ''],
+    [13, '2027-01-16', 'SANTA PONSA CF "A"'        , 'OLIMPIC'                   , 'P.M. Santa Ponsa F-7 A'],
+    [14, '2027-01-23', 'COL. SAN PEDRO'            , 'SANTA PONSA CF "A"'        , ''],
+    [15, '2027-01-30', 'SANTA PONSA CF "A"'        , 'ESTUDIANTES DEL CIDE'      , 'P.M. Santa Ponsa F-7 A'],
+    [16, '2027-02-06', 'R C D MALLORCA SAD "A"'    , 'SANTA PONSA CF "A"'        , ''],
+    [17, '2027-02-13', 'SANTA PONSA CF "A"'        , 'SD LA SALLE'               , 'P.M. Santa Ponsa F-7 A']
+].map(x => ({ j: x[0], fecha: x[1], local: x[2], visitante: x[3], campo: x[4] }));
+// Nombre con el que aparece el club en cada competición
+const CAL_CLUB = { BenjaminA: 'SANTA PONSA CF "A"' };
+function clubCal() { return (equipoActual && CAL_CLUB[equipoActual.id]) || NOMBRE_CLUB_CAL; }
+// Enlaces a la web de la Federación (consulta manual de resultados y clasificación)
+const CAL_FFIB = {
+  BenjaminA:   'https://www.ffib.es/Fed/NPcd/NFG_CmpJornada?cod_primaria=1000110&CodCompeticion=23535726&CodGrupo=23535728&CodTemporada=22&CodJornada=1&Sch_Codigo_Delegacion=1',
+  BenjaminC:   'https://www.ffib.es/Fed/NPcd/NFG_CmpJornada?cod_primaria=1000110&CodCompeticion=23716119&CodGrupo=23721170&CodTemporada=22&CodJornada=1&Sch_Codigo_Delegacion=1',
+  AlevinA:     'https://www.ffib.es/Fed/NPcd/NFG_CmpJornada?cod_primaria=1000110&CodCompeticion=23348718&CodGrupo=23348719&CodTemporada=22&CodJornada=1&Sch_Codigo_Delegacion=1',
+  InfantilF11: 'https://www.ffib.es/Fed/NPcd/NFG_CmpJornada?cod_primaria=1000110&CodCompeticion=23348648&CodGrupo=23348649&CodTemporada=22&CodJornada=1&Sch_Codigo_Delegacion=1',
+  Juvenil:     'https://www.ffib.es/Fed/NPcd/NFG_CmpJornada?cod_primaria=1000110&CodCompeticion=23591971&CodGrupo=23591974&CodTemporada=22&CodJornada=1&Sch_Codigo_Delegacion=1'
+};
 const CAL_COMPETICION = {
+  Juvenil: 'Liga Juvenil · Temporada 2026-2027',
+  BenjaminA: 'Liga Benjamín · Temporada 2026-2027',
   InfantilF11: 'Liga Infantil · Temporada 2026-2027',
   BenjaminC: 'Liga Benjamín · Temporada 2026-2027',
   AlevinA: 'Fase clasificación Alevín 1ª Regional Mallorca · Grupo A · Temporada 2026-2027'
@@ -2725,6 +2775,7 @@ function mostrarPestanaCalendario() {
 function abrirCalendario(btn) {
   setTab('calendario', btn);
   const c = document.getElementById('cal-comp'); if (c) c.textContent = CAL_COMPETICION[equipoActual.id] || '';
+  const f = document.getElementById('cal-ffib'); if (f) { const u = CAL_FFIB[equipoActual.id]; f.style.display = u ? 'inline-block' : 'none'; if (u) f.href = u; }
   pintarCalendario(); cargarResultados();
 }
 
@@ -2737,9 +2788,9 @@ async function cargarResultados() {
   } catch(e) { console.log('Resultados:', e.message); }
 }
 
-function rivalDe(p) { return p.local === NOMBRE_CLUB_CAL ? p.visitante : p.local; }
+function rivalDe(p) { return p.local === clubCal() ? p.visitante : p.local; }
 function esDescanso(p) { return /^descansa$/i.test(rivalDe(p)); }
-function enCasa(p) { return p.local === NOMBRE_CLUB_CAL; }
+function enCasa(p) { return p.local === clubCal(); }
 function signoResultado(p, r) {
   const m = String(r || '').match(/^\s*(\d+)\s*[-–]\s*(\d+)\s*$/); if (!m) return null;
   const gl = +m[1], gv = +m[2], nos = enCasa(p) ? gl : gv, ellos = enCasa(p) ? gv : gl;
@@ -2766,7 +2817,7 @@ function pintarCalendario() {
     const r = (_resultados[p.j] || {}).resultado || '', s = signoResultado(p, r);
     const col = s === 'V' ? '#065F46' : s === 'E' ? '#B45309' : s === 'D' ? '#991B1B' : '#9CA3AF';
     const esProx = prox && prox.j === p.j;
-    const eq = n => n === NOMBRE_CLUB_CAL ? `<b style="color:#065F46">${escI(n)}</b>` : escI(n);
+    const eq = n => n === clubCal() ? `<b style="color:#065F46">${escI(n)}</b>` : escI(n);
     return `<div style="border:1px solid ${esProx ? '#C2410C' : '#E5E7EB'};border-left:5px solid ${col};border-radius:8px;padding:9px 11px;margin-bottom:8px;background:${esProx ? '#FFF7ED' : '#fff'}">
       <div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px;color:#6B7280">
         <span><b style="color:#1C2B4A">Jornada ${p.j}</b> · ${fmt(p.fecha)}${esProx ? ' · <b style="color:#C2410C">PRÓXIMO PARTIDO</b>' : ''}</span>
