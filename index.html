@@ -3974,7 +3974,7 @@ function mostrarStatsIndividuales() {
 function anonimizarInforme(html) {
   const J = jugs().slice();
   const etiqueta = {};
-  J.forEach((j, i) => { etiqueta[j] = 'Jugador ' + String(i + 1).padStart(2, '0'); });
+  J.forEach((j, i) => { etiqueta[j] = 'Jugador ' + (i + 1); });   // mismo número que en la app
   J.sort((a, b) => b.length - a.length).forEach(j => {
     const re = new RegExp(j.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     html = html.replace(re, etiqueta[j]);
