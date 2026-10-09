@@ -212,6 +212,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="panel-visitas" style="display:none;margin-bottom:16px"></div>
 
     <!-- CASOS GRAVES — solo visible para Nefta -->
+    <div class="solo-nefta" id="cmp-equipos-card" style="display:none;margin-bottom:16px;background:#fff;border-radius:12px;padding:12px 14px;border-top:3px solid #1C2B4A;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+      <div style="font-weight:800;font-size:14px;color:#1C2B4A;margin-bottom:6px">📊 Comparativa entre equipos · solo Nefta</div>
+      <button class="btn btn-n" onclick="generarComparativaEquipos()" style="margin-bottom:8px">Generar comparativa de todos los equipos</button>
+      <div id="cmp-eq" style="display:none">
+        <div id="cmp-eq-tabla"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:10px">
+          <div style="padding:6px"><canvas id="cmpe-asis" height="240"></canvas></div>
+          <div style="padding:6px"><canvas id="cmpe-val" height="240"></canvas></div>
+          <div style="padding:6px"><canvas id="cmpe-dims" height="240"></canvas></div>
+          <div style="padding:6px"><canvas id="cmpe-inc" height="240"></canvas></div>
+        </div>
+        <div style="padding:6px"><canvas id="cmpe-bal" height="260"></canvas></div>
+        <div id="cmp-eq-detalle"></div>
+      </div>
+    </div>
     <div id="alerta-casos-graves" style="display:none;margin-bottom:16px">
       <div style="background:#FFF1F2;border:2px solid #FECACA;border-radius:10px;overflow:hidden">
         <div style="background:#991B1B;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
@@ -565,6 +580,25 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
 
         <div id="faltas-jugadores" style="margin-top:12px"></div>
+        <div class="sep" style="margin-top:14px">🗓️ Semana actual frente al acumulado de la temporada</div>
+        <button class="btn btn-n" onclick="generarComparativaSemana()" style="margin-bottom:10px">📊 Generar comparativa semanal</button>
+        <div id="cmp-semana" style="display:none">
+          <div id="cmp-tabla"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px">
+            <div class="card" style="padding:10px"><canvas id="cmp-grupo" height="230"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-asis" height="230"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-pie-sem" height="230"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-pie-acc" height="230"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-evol-val" height="230"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-evol-asis" height="230"></canvas></div>
+          </div>
+          <div class="card" style="padding:10px;margin-top:12px"><canvas id="cmp-jug" height="320"></canvas></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px">
+            <div class="card" style="padding:10px"><canvas id="cmp-disp" height="260"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-inc" height="260"></canvas></div>
+          </div>
+          <div id="cmp-semaforo" style="margin-top:12px"></div>
+        </div>
         </div><!-- /solo-nefta -->
         <div id="eval-auto-result" style="display:none;background:#DBEAFE;border-left:3px solid #2563EB;padding:12px 14px;border-radius:6px;margin-bottom:10px;font-size:12px;color:#1C2B4A;line-height:1.8"></div>
         <div class="field">
@@ -1134,6 +1168,7 @@ async function verificarPW() {
     document.getElementById('pantalla-inicio').style.display = 'none';
     document.getElementById('pantalla-equipos').style.display = 'block';
     if (isNefta) { cargarEstadosCasos().then(mostrarAlertaCasosGraves); marcarNeftaVisitas(); setTimeout(cargarVisitas, 1200); }
+    { const c = document.getElementById('cmp-equipos-card'); if (c) c.style.display = isNefta ? 'block' : 'none'; }
   } else {
     document.getElementById('pw-err').style.display = 'block';
     document.getElementById('pw-input').value = '';
@@ -2892,6 +2927,173 @@ function calAAlineacion(j) {
 
 
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPARATIVA SEMANA / ACUMULADO (equipo) y COMPARATIVA ENTRE EQUIPOS · solo Nefta
+// ══════════════════════════════════════════════════════════════════════════════
+const _chartsCmp = {};
+function grafCmp(id, cfg) { const el = document.getElementById(id); if (!el || typeof Chart === 'undefined') return; if (_chartsCmp[id]) { try { _chartsCmp[id].destroy(); } catch(e) {} } _chartsCmp[id] = new Chart(el.getContext('2d'), cfg); }
+const tituloCmp = t => ({ display: true, text: t, font: { size: 12, weight: 'bold' }, color: '#1C2B4A' });
+const isoHoy = () => new Date().toISOString().slice(0, 10);
+const isoMenos = (iso, n) => new Date(new Date(iso + 'T12:00:00').getTime() - n * 864e5).toISOString().slice(0, 10);
+const f1c = x => (x === null || x === undefined || isNaN(x)) ? '—' : (Math.round(x * 10) / 10).toString().replace('.', ',');
+
+function metricasDatos(data, desde, hasta) {
+  const f10 = v => String(v || '').slice(0, 10);
+  const dentro = r => { const f = f10(r.Fecha || r.Desde); return f && f >= desde && f <= hasta; };
+  const ultimo = (arr, campo) => { const o = {}; (arr || []).filter(dentro).forEach(r => { if (campo && !r[campo]) return; o[f10(r.Fecha) + '|' + r.Jugador] = r; }); return Object.values(o); };
+  const media = a => { const v = a.filter(x => x !== null && !isNaN(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  const as = ultimo(data.Asistencia, 'Asistencia'), va = ultimo(data.Valoracion);
+  const sel = t => (data[t] || []).filter(dentro);
+  const m = { jugadores: {} };
+  const J = n => (m.jugadores[n] = m.jugadores[n] || { pres: 0, tot: 0, val: [] });
+  m.presentes = as.filter(r => r.Asistencia === 'Presente').length; m.fj = as.filter(r => r.Asistencia === 'Ausente justificada').length;
+  m.fnj = as.filter(r => r.Asistencia === 'Ausente no justificada').length; m.pctAsis = as.length ? m.presentes / as.length * 100 : null;
+  as.forEach(r => { const x = J(nombreEnPlantilla(r.Jugador)); x.tot++; if (r.Asistencia === 'Presente') x.pres++; });
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+  m.ate = media(va.map(r => num(r.Atencion))); m.int = media(va.map(r => num(r.Intensidad))); m.act = media(va.map(r => num(r.Actitud)));
+  m.valGlobal = media([m.ate, m.int, m.act]);
+  va.forEach(r => { const v = media([num(r.Atencion), num(r.Intensidad), num(r.Actitud)]); if (v !== null) J(nombreEnPlantilla(r.Jugador)).val.push(v); });
+  const mot = { 'muy alto': 5, 'alto': 4, 'normal': 3, 'bajo': 2, 'muy bajo': 1 }, cli = { 'muy bueno': 5, 'bueno': 4, 'regular': 3, 'tenso': 2 };
+  const cs = sel('ClimaSemana'); m.motivacion = media(cs.map(r => mot[String(r.Motivacion || '').toLowerCase()] || null)); m.clima = media(cs.map(r => cli[String(r.Clima || '').toLowerCase()] || null));
+  const pts = t => { t = String(t || ''); return /excelente/i.test(t) ? 4 : /muy buena/i.test(t) ? 3 : /buena/i.test(t) ? 2 : /mejorable|regular/i.test(t) ? 1 : null; };
+  m.actuacion = media(ultimo(data.Alineacion).map(r => pts(r.Actuacion)));
+  m.conflictosE = sel('ConflictoEntreno').length; m.conflictosP = sel('ConflictoPartido').length; m.quejas = sel('Quejas').length;
+  const ta = sel('Tarjetas'); m.rojas = ta.filter(r => /roja/i.test(r.Tipo || '')).length; m.amarillas = ta.length - m.rojas;
+  m.hay = as.length + va.length + m.conflictosE + m.conflictosP + m.quejas + ta.length > 0;
+  return m;
+}
+function fechasDatos(data) { const f = []; ['Asistencia', 'Valoracion', 'Alineacion', 'ConflictoEntreno'].forEach(t => (data[t] || []).forEach(r => { if (r.Fecha) f.push(String(r.Fecha).slice(0, 10)); })); return f.sort(); }
+function rangosSemana(data) {
+  const fs = fechasDatos(data); if (!fs.length) return null;
+  let hasta = isoHoy(); if (!fs.some(f => f > isoMenos(hasta, 7))) hasta = fs[fs.length - 1];
+  const desde = isoMenos(hasta, 6), pHasta = isoMenos(desde, 1), pDesde = isoMenos(pHasta, 6);
+  return { desde, hasta, pDesde, pHasta, inicio: fs[0] };
+}
+function semanasDatos(data, hasta, inicio) {
+  const out = []; let fin = hasta;
+  for (let k = 0; k < 12 && fin >= inicio; k++) { const ini = isoMenos(fin, 6); const m = metricasDatos(data, ini, fin); if (m.hay) out.unshift({ et: ini.slice(8, 10) + '/' + ini.slice(5, 7), m }); fin = isoMenos(ini, 1); }
+  return out;
+}
+const VARS_CMP = [['pctAsis', 'Asistencia', ' %', false, 5, 85], ['ate', 'Atención', '', false, .3, 3], ['int', 'Intensidad', '', false, .3, 3], ['act', 'Actitud', '', false, .3, 3],
+  ['motivacion', 'Motivación', '', false, .3, 3], ['clima', 'Clima', '', false, .3, 3], ['actuacion', 'Actuación', '', false, .3, 2],
+  ['conflictosE', 'Conflictos entreno', '', true, 1, 2], ['conflictosP', 'Conflictos partido', '', true, 1, 1], ['amarillas', 'Tarjetas', '', true, 1, 2], ['quejas', 'Quejas', '', true, 1, 1]];
+function clasificarCmp(m, prev, acc) {
+  const out = { mejorado: [], mantenido: [], aMejorar: [] };
+  VARS_CMP.forEach(v => {
+    const a = m[v[0]]; if (a === null || a === undefined) return;
+    const ref = prev && prev.hay && prev[v[0]] !== null ? prev[v[0]] : acc[v[0]], malo = v[3] ? a >= v[5] : a < v[5];
+    const txt = v[1] + ': ' + f1c(a) + v[2];
+    if (ref === null || ref === undefined) { (malo ? out.aMejorar : out.mantenido).push(txt); return; }
+    const d = a - ref, mej = v[3] ? d <= -v[4] : d >= v[4], emp = v[3] ? d >= v[4] : d <= -v[4];
+    (mej ? out.mejorado : (emp || malo) ? out.aMejorar : out.mantenido).push(txt);
+  });
+  return out;
+}
+function htmlBalance(c) {
+  const col = (t, arr, bg, fg) => `<div style="flex:1;min-width:160px;background:${bg};border-radius:8px;padding:8px"><div style="font-weight:800;font-size:11px;color:${fg};margin-bottom:4px">${t}</div>${arr.length ? arr.map(x => `<div style="font-size:11px;margin-bottom:2px">• ${escI(x)}</div>`).join('') : '<div style="font-size:11px;color:#6B7280">—</div>'}</div>`;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${col('📈 Ha mejorado', c.mejorado, '#ECFDF5', '#065F46')}${col('➖ Se ha mantenido', c.mantenido, '#EFF6FF', '#1E40AF')}${col('⚠️ Debe mejorar', c.aMejorar, '#FEF2F2', '#991B1B')}</div>`;
+}
+
+function generarComparativaSemana() {
+  if (!isNefta) return;
+  const data = (window._datosEq || {})[equipoActual.id];
+  if (!data) { toast('⚠️ Pulsa 🔄 Actualizar para cargar los datos del equipo', true); return; }
+  if (typeof Chart === 'undefined') { toast('⚠️ Cargando gráficos, inténtalo en unos segundos', true); return; }
+  const R = rangosSemana(data); if (!R) { toast('Sin registros en este equipo'); return; }
+  const m = metricasDatos(data, R.desde, R.hasta), acc = metricasDatos(data, '0000-00-00', '9999-12-31'), prev = metricasDatos(data, R.pDesde, R.pHasta);
+  const sem = semanasDatos(data, R.hasta, R.inicio), nSem = Math.max(1, sem.length);
+  document.getElementById('cmp-semana').style.display = 'block';
+  const fila = (n, a, b, suf) => `<tr><td style="text-align:left;padding-left:7px">${n}</td><td><b>${f1c(a)}${a === null ? '' : suf}</b></td><td style="color:#6B7280">${f1c(b)}${b === null ? '' : suf}</td></tr>`;
+  document.getElementById('cmp-tabla').innerHTML = `<div style="font-size:11px;color:#6B7280;margin-bottom:4px">Semana: ${R.desde.split('-').reverse().join('/')} – ${R.hasta.split('-').reverse().join('/')} · Acumulado: toda la temporada registrada</div>
+    <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Variable</th><th>Esta semana</th><th>Acumulado</th></tr></thead><tbody>
+    ${fila('Asistencia', m.pctAsis, acc.pctAsis, ' %')}${fila('Atención (1-5)', m.ate, acc.ate, '')}${fila('Intensidad (1-5)', m.int, acc.int, '')}${fila('Actitud (1-5)', m.act, acc.act, '')}
+    ${fila('Motivación (1-5)', m.motivacion, acc.motivacion, '')}${fila('Clima (1-5)', m.clima, acc.clima, '')}${fila('Actuación (1-4)', m.actuacion, acc.actuacion, '')}
+    ${fila('Conflictos (acum.: media semanal)', m.conflictosE + m.conflictosP, (acc.conflictosE + acc.conflictosP) / nSem, '')}${fila('Tarjetas (acum.: media semanal)', m.amarillas + m.rojas, (acc.amarillas + acc.rojas) / nSem, '')}
+    </tbody></table></div>${htmlBalance(clasificarCmp(m, prev, acc))}`;
+  const V = '#065F46', G = '#9CA3AF';
+  grafCmp('cmp-grupo', { type: 'bar', data: { labels: ['Atención', 'Intensidad', 'Actitud', 'Motivación', 'Clima'], datasets: [
+    { label: 'Esta semana', data: [m.ate, m.int, m.act, m.motivacion, m.clima], backgroundColor: V }, { label: 'Acumulado', data: [acc.ate, acc.int, acc.act, acc.motivacion, acc.clima], backgroundColor: G }] },
+    options: { plugins: { title: tituloCmp('Valoración del grupo: semana y acumulado'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
+  grafCmp('cmp-asis', { type: 'bar', data: { labels: ['Asistencia'], datasets: [{ label: 'Esta semana', data: [m.pctAsis], backgroundColor: '#059669' }, { label: 'Acumulado', data: [acc.pctAsis], backgroundColor: G }] },
+    options: { indexAxis: 'y', plugins: { title: tituloCmp('Asistencia (%): semana y acumulado'), legend: { position: 'bottom' } }, scales: { x: { min: 0, max: 100 } } } });
+  const pie = (id, t, x) => grafCmp(id, { type: 'pie', data: { labels: ['Presentes', 'Falta justificada', 'Falta no justificada'], datasets: [{ data: [x.presentes, x.fj, x.fnj], backgroundColor: ['#059669', '#F59E0B', '#DC2626'] }] }, options: { plugins: { title: tituloCmp(t), legend: { position: 'bottom' } } } });
+  pie('cmp-pie-sem', 'Asistencia de la semana', m); pie('cmp-pie-acc', 'Asistencia acumulada', acc);
+  grafCmp('cmp-evol-val', { type: 'line', data: { labels: sem.map(s => s.et), datasets: [
+    { label: 'Atención', data: sem.map(s => s.m.ate), borderColor: '#2563EB', backgroundColor: '#2563EB', tension: .3 },
+    { label: 'Intensidad', data: sem.map(s => s.m.int), borderColor: '#F59E0B', backgroundColor: '#F59E0B', tension: .3 },
+    { label: 'Actitud', data: sem.map(s => s.m.act), borderColor: '#059669', backgroundColor: '#059669', tension: .3 }] },
+    options: { plugins: { title: tituloCmp('Evolución semana a semana (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
+  grafCmp('cmp-evol-asis', { type: 'line', data: { labels: sem.map(s => s.et), datasets: [{ label: 'Asistencia %', data: sem.map(s => s.m.pctAsis), borderColor: V, backgroundColor: 'rgba(6,95,70,.15)', fill: true, tension: .3 }] },
+    options: { plugins: { title: tituloCmp('Evolución de la asistencia (%)'), legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
+  const J = jugs().filter(j => acc.jugadores[j] && acc.jugadores[j].val.length);
+  const med = a => a && a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+  grafCmp('cmp-jug', { type: 'bar', data: { labels: J, datasets: [
+    { label: 'Esta semana', data: J.map(j => m.jugadores[j] ? med(m.jugadores[j].val) : null), backgroundColor: '#7C3AED' },
+    { label: 'Acumulado', data: J.map(j => med(acc.jugadores[j].val)), backgroundColor: G }] },
+    options: { indexAxis: 'y', plugins: { title: tituloCmp('Valoración por jugador: semana y acumulado (1-5)'), legend: { position: 'bottom' } }, scales: { x: { min: 0, max: 5 } } } });
+  grafCmp('cmp-disp', { type: 'scatter', data: { datasets: [{ label: 'Jugadores', data: J.filter(j => acc.jugadores[j].tot).map(j => ({ x: acc.jugadores[j].pres / acc.jugadores[j].tot * 100, y: med(acc.jugadores[j].val), j })),
+    backgroundColor: '#2563EB', pointRadius: 6 }] },
+    options: { plugins: { title: tituloCmp('Asistencia frente a valoración (acumulado)'), legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.j + ': ' + Math.round(c.raw.x) + ' % · ' + f1c(c.raw.y) } } },
+      scales: { x: { min: 0, max: 100, title: { display: true, text: 'Asistencia (%)' } }, y: { min: 0, max: 5, title: { display: true, text: 'Valoración' } } } } });
+  grafCmp('cmp-inc', { type: 'bar', data: { labels: ['Conflictos entreno', 'Conflictos partido', 'Amarillas', 'Rojas', 'Quejas'], datasets: [
+    { label: 'Esta semana', data: [m.conflictosE, m.conflictosP, m.amarillas, m.rojas, m.quejas], backgroundColor: '#EA580C' },
+    { label: 'Media semanal', data: [acc.conflictosE, acc.conflictosP, acc.amarillas, acc.rojas, acc.quejas].map(v => v / nSem), backgroundColor: G }] },
+    options: { plugins: { title: tituloCmp('Incidencias: semana y media semanal'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
+  // Semáforo y jugadores por debajo de 2,5
+  const filas = J.map(j => { const sv = m.jugadores[j] ? med(m.jugadores[j].val) : null, av = med(acc.jugadores[j].val), ref = sv !== null ? sv : av;
+    const e = ref < 2.5 ? ['🔴 Prioridad', '#FEE2E2'] : ref < 3.5 ? ['🟡 Reforzar', '#FEF3C7'] : ['🟢 Bien', '#D1FAE5'];
+    return { j, sv, av, ref, e, asis: acc.jugadores[j].tot ? Math.round(acc.jugadores[j].pres / acc.jugadores[j].tot * 100) + ' %' : '—' }; });
+  const bajos = filas.filter(f => f.ref !== null && f.ref < 2.5);
+  document.getElementById('cmp-semaforo').innerHTML = `<div class="sep">🚦 Semáforo por jugador</div><div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Jugador</th><th>Semana</th><th>Acumulado</th><th>Asistencia</th><th>Estado</th></tr></thead><tbody>` +
+    filas.map(f => `<tr><td class="jn">${escI(f.j)}</td><td>${f1c(f.sv)}</td><td>${f1c(f.av)}</td><td>${f.asis}</td><td style="background:${f.e[1]};font-weight:700">${f.e[0]}</td></tr>`).join('') + `</tbody></table></div>` +
+    (bajos.length ? `<div style="background:#FEF2F2;border-left:4px solid #991B1B;border-radius:6px;padding:9px 11px;margin-top:8px;font-size:12px">
+      <b>Jugadores con valoración inferior a 2,5:</b> ${bajos.map(f => escI(f.j)).join(', ')}.<br>
+      Hasta disponer de las <b>hojas de consentimiento informado firmadas por las familias</b> (RGPD/LOPDGDD), no se realizará intervención individual con estos jugadores. Sí se dan <b>pautas al entrenador</b> para el trabajo en grupo.</div>` : '');
+  toast('✅ Comparativa semanal generada');
+}
+
+async function generarComparativaEquipos() {
+  if (!isNefta) return;
+  if (typeof Chart === 'undefined') { toast('⚠️ Cargando gráficos, inténtalo en unos segundos', true); return; }
+  toast('🔄 Descargando datos de todos los equipos…');
+  const eqs = Object.keys(EQUIPOS).map(k => EQUIPOS[k]).filter(e => (e.jugadores || []).length);
+  window._datosEq = window._datosEq || {};
+  for (const e of eqs) {
+    if (window._datosEq[e.id]) continue;
+    try { const r = await fetch(GAS + '?accion=datos&equipo=' + encodeURIComponent(e.id)); const d = await r.json(); if (d && d.ok) window._datosEq[e.id] = d; } catch(err) {}
+  }
+  const hasta = isoHoy(), desde = isoMenos(hasta, 6), pHasta = isoMenos(desde, 1), pDesde = isoMenos(pHasta, 6);
+  const filas = [], sinReg = [];
+  eqs.forEach(e => {
+    const d = window._datosEq[e.id]; if (!d) { sinReg.push(e); return; }
+    const m = metricasDatos(d, desde, hasta), acc = metricasDatos(d, '0000-00-00', '9999-12-31'), prev = metricasDatos(d, pDesde, pHasta);
+    if (!m.hay) sinReg.push(e);
+    if (!acc.hay) return;
+    filas.push({ e, m, acc, c: clasificarCmp(m, prev, acc) });
+  });
+  document.getElementById('cmp-eq').style.display = 'block';
+  document.getElementById('cmp-eq-tabla').innerHTML = `<div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Equipo</th><th>Asist. sem.</th><th>Asist. acum.</th><th>Valor. sem.</th><th>Valor. acum.</th><th>📈</th><th>➖</th><th>⚠️</th></tr></thead><tbody>` +
+    filas.map(f => `<tr><td class="jn">${escI(f.e.nombre)}</td><td>${f.m.pctAsis === null ? '—' : Math.round(f.m.pctAsis) + ' %'}</td><td style="color:#6B7280">${f.acc.pctAsis === null ? '—' : Math.round(f.acc.pctAsis) + ' %'}</td><td>${f1c(f.m.valGlobal)}</td><td style="color:#6B7280">${f1c(f.acc.valGlobal)}</td>
+      <td style="color:#065F46;font-weight:800">${f.c.mejorado.length}</td><td style="color:#1E40AF;font-weight:800">${f.c.mantenido.length}</td><td style="color:#991B1B;font-weight:800">${f.c.aMejorar.length}</td></tr>`).join('') + `</tbody></table></div>
+    <div style="font-size:11px;color:#6B7280;margin-top:4px">Semana: ${desde.split('-').reverse().join('/')} – ${hasta.split('-').reverse().join('/')}</div>`;
+  const L = filas.map(f => f.e.nombre), G = '#9CA3AF';
+  grafCmp('cmpe-asis', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.pctAsis), backgroundColor: '#059669' }, { label: 'Acumulado', data: filas.map(f => f.acc.pctAsis), backgroundColor: G }] },
+    options: { plugins: { title: tituloCmp('Asistencia (%) por equipo'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 100 } } } });
+  grafCmp('cmpe-val', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.valGlobal), backgroundColor: '#7C3AED' }, { label: 'Acumulado', data: filas.map(f => f.acc.valGlobal), backgroundColor: G }] },
+    options: { plugins: { title: tituloCmp('Valoración media por equipo (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
+  grafCmp('cmpe-dims', { type: 'bar', data: { labels: L, datasets: [{ label: 'Atención', data: filas.map(f => f.acc.ate), backgroundColor: '#2563EB' }, { label: 'Intensidad', data: filas.map(f => f.acc.int), backgroundColor: '#F59E0B' }, { label: 'Actitud', data: filas.map(f => f.acc.act), backgroundColor: '#059669' }] },
+    options: { plugins: { title: tituloCmp('Atención, intensidad y actitud (acumulado)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
+  grafCmp('cmpe-inc', { type: 'bar', data: { labels: L, datasets: [{ label: 'Conflictos', data: filas.map(f => f.acc.conflictosE + f.acc.conflictosP), backgroundColor: '#EA580C' }, { label: 'Tarjetas', data: filas.map(f => f.acc.amarillas + f.acc.rojas), backgroundColor: '#EAB308' }, { label: 'Quejas', data: filas.map(f => f.acc.quejas), backgroundColor: '#2563EB' }] },
+    options: { plugins: { title: tituloCmp('Incidencias acumuladas por equipo'), legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+  grafCmp('cmpe-bal', { type: 'bar', data: { labels: L, datasets: [{ label: 'Ha mejorado', data: filas.map(f => f.c.mejorado.length), backgroundColor: '#059669' }, { label: 'Se ha mantenido', data: filas.map(f => f.c.mantenido.length), backgroundColor: '#2563EB' }, { label: 'Debe mejorar', data: filas.map(f => f.c.aMejorar.length), backgroundColor: '#DC2626' }] },
+    options: { indexAxis: 'y', plugins: { title: tituloCmp('Balance de cada equipo'), legend: { position: 'bottom' } }, scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } } } });
+  document.getElementById('cmp-eq-detalle').innerHTML =
+    (sinReg.length ? `<div style="background:#FEF3C7;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px"><b>📭 Sin registros esta semana:</b> ${sinReg.map(e => escI(e.nombre) + (e.entrenador && e.entrenador !== '—' ? ' (' + escI(e.entrenador) + ')' : '')).join(', ')}</div>` : '') +
+    filas.map(f => `<div style="margin-top:10px"><div style="font-weight:800;color:#1C2B4A;font-size:13px">⚽ ${escI(f.e.nombre)}</div>${htmlBalance(f.c)}</div>`).join('');
+  toast('✅ Comparativa de equipos generada');
+}
+
 // ── Stats partido — acceso con contraseña ────────────────────────────────────
 const STATS_PW_H = '034cbb657c3ece7581cc34cab50278ec54380a974c1985ab9bd29cf5e83e5257';
 
@@ -3166,6 +3368,7 @@ async function cargarDesdeSheets(equipoId, silencioso) {
     const data = await res.json();
     if (!data || !data.ok) throw new Error((data && data.error) || 'Respuesta no válida');
     if (miCarga !== _cargaId) return 0;
+    window._datosEq = window._datosEq || {}; window._datosEq[equipoId] = data;
     const vistos = {};
     const nuevo = (reg) => {
       if (reg.Jugador) reg.Jugador = nombreEnPlantilla(reg.Jugador);
