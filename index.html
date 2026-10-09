@@ -222,6 +222,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <div style="padding:6px"><canvas id="cmpe-val" height="240"></canvas></div>
           <div style="padding:6px"><canvas id="cmpe-dims" height="240"></canvas></div>
           <div style="padding:6px"><canvas id="cmpe-inc" height="240"></canvas></div>
+          <div style="padding:6px"><canvas id="cmpe-reg" height="240"></canvas></div>
         </div>
         <div style="padding:6px"><canvas id="cmpe-bal" height="260"></canvas></div>
         <div id="cmp-eq-detalle"></div>
@@ -581,7 +582,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
         <div id="faltas-jugadores" style="margin-top:12px"></div>
         <div class="sep" style="margin-top:14px">🗓️ Semana actual frente al acumulado de la temporada</div>
-        <button class="btn btn-n" onclick="generarComparativaSemana()" style="margin-bottom:10px">📊 Generar comparativa semanal</button>
+        <button class="btn btn-n" onclick="generarComparativaSemana()" style="margin-bottom:10px">🔄 Actualizar estadísticas completas</button>
         <div id="cmp-semana" style="display:none">
           <div id="cmp-tabla"></div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px">
@@ -596,7 +597,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px">
             <div class="card" style="padding:10px"><canvas id="cmp-disp" height="260"></canvas></div>
             <div class="card" style="padding:10px"><canvas id="cmp-inc" height="260"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-reg" height="260"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-hist" height="260"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-dia" height="260"></canvas></div>
           </div>
+          <div id="cmp-club" style="margin-top:12px"></div>
+          <div class="card" style="padding:10px;margin-top:8px"><canvas id="cmp-club-g" height="230"></canvas></div>
           <div id="cmp-semaforo" style="margin-top:12px"></div>
         </div>
         </div><!-- /solo-nefta -->
@@ -2972,7 +2978,7 @@ function rangosSemana(data) {
 }
 function semanasDatos(data, hasta, inicio) {
   const out = []; let fin = hasta;
-  for (let k = 0; k < 12 && fin >= inicio; k++) { const ini = isoMenos(fin, 6); const m = metricasDatos(data, ini, fin); if (m.hay) out.unshift({ et: ini.slice(8, 10) + '/' + ini.slice(5, 7), m }); fin = isoMenos(ini, 1); }
+  for (let k = 0; k < 12 && fin >= inicio; k++) { const ini = isoMenos(fin, 6); const m = metricasDatos(data, ini, fin); if (m.hay) out.unshift({ et: ini.slice(8, 10) + '/' + ini.slice(5, 7), m, fin }); fin = isoMenos(ini, 1); }
   return out;
 }
 const VARS_CMP = [['pctAsis', 'Asistencia', ' %', false, 5, 85], ['ate', 'Atención', '', false, .3, 3], ['int', 'Intensidad', '', false, .3, 3], ['act', 'Actitud', '', false, .3, 3],
@@ -2995,17 +3001,34 @@ function htmlBalance(c) {
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${col('📈 Ha mejorado', c.mejorado, '#ECFDF5', '#065F46')}${col('➖ Se ha mantenido', c.mantenido, '#EFF6FF', '#1E40AF')}${col('⚠️ Debe mejorar', c.aMejorar, '#FEF2F2', '#991B1B')}</div>`;
 }
 
-function generarComparativaSemana() {
+// ── Ajuste por número de registros ─────────────────────────────────────────
+// Media «ajustada» (bayesiana): con pocos registros, el valor se acerca a la media
+// del grupo; con muchos, pesa su propia media. Así 1 registro de 5 no supera a 15 de 4,5.
+const K_JUG = 5, K_EQ = 3;
+function ajustar(media, n, previa, k) {
+  if (media === null || media === undefined || isNaN(media)) return null;
+  if (previa === null || previa === undefined || isNaN(previa)) return media;
+  return (n * media + k * previa) / (n + k);
+}
+function fiabilidad(n) { return n >= 8 ? ['Alta', '#065F46', '#D1FAE5'] : n >= 3 ? ['Media', '#92400E', '#FEF3C7'] : ['Baja', '#991B1B', '#FEE2E2']; }
+const medA = a => a && a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+
+function generarComparativaSemana(silencioso) {
   if (!isNefta) return;
   const data = (window._datosEq || {})[equipoActual.id];
-  if (!data) { toast('⚠️ Pulsa 🔄 Actualizar para cargar los datos del equipo', true); return; }
-  if (typeof Chart === 'undefined') { toast('⚠️ Cargando gráficos, inténtalo en unos segundos', true); return; }
-  const R = rangosSemana(data); if (!R) { toast('Sin registros en este equipo'); return; }
+  if (!data) { if (!silencioso) toast('⚠️ Pulsa 🔄 Actualizar para cargar los datos del equipo', true); return; }
+  if (typeof Chart === 'undefined') { if (!silencioso) toast('⚠️ Cargando gráficos, inténtalo en unos segundos', true); return; }
+  const R = rangosSemana(data); if (!R) { if (!silencioso) toast('Sin registros en este equipo'); return; }
   const m = metricasDatos(data, R.desde, R.hasta), acc = metricasDatos(data, '0000-00-00', '9999-12-31'), prev = metricasDatos(data, R.pDesde, R.pHasta);
   const sem = semanasDatos(data, R.hasta, R.inicio), nSem = Math.max(1, sem.length);
+  const sesiones = new Set((data.Asistencia || []).map(r => String(r.Fecha || '').slice(0, 10)).filter(Boolean));
+  const sesSem = [...sesiones].filter(f => f >= R.desde && f <= R.hasta).length;
   document.getElementById('cmp-semana').style.display = 'block';
   const fila = (n, a, b, suf) => `<tr><td style="text-align:left;padding-left:7px">${n}</td><td><b>${f1c(a)}${a === null ? '' : suf}</b></td><td style="color:#6B7280">${f1c(b)}${b === null ? '' : suf}</td></tr>`;
+  const regVal = (data.Valoracion || []).length, regAs = (data.Asistencia || []).length;
   document.getElementById('cmp-tabla').innerHTML = `<div style="font-size:11px;color:#6B7280;margin-bottom:4px">Semana: ${R.desde.split('-').reverse().join('/')} – ${R.hasta.split('-').reverse().join('/')} · Acumulado: toda la temporada registrada</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${[['Sesiones esta semana', sesSem, '#DBEAFE'], ['Sesiones en la temporada', sesiones.size, '#E0E7FF'], ['Registros de asistencia', regAs, '#D1FAE5'], ['Registros de valoración', regVal, '#FEF3C7']]
+      .map(k => `<div style="flex:1;min-width:110px;background:${k[2]};border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:700;color:#374151">${k[0].toUpperCase()}</div><div style="font-size:17px;font-weight:900">${k[1]}</div></div>`).join('')}</div>
     <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Variable</th><th>Esta semana</th><th>Acumulado</th></tr></thead><tbody>
     ${fila('Asistencia', m.pctAsis, acc.pctAsis, ' %')}${fila('Atención (1-5)', m.ate, acc.ate, '')}${fila('Intensidad (1-5)', m.int, acc.int, '')}${fila('Actitud (1-5)', m.act, acc.act, '')}
     ${fila('Motivación (1-5)', m.motivacion, acc.motivacion, '')}${fila('Clima (1-5)', m.clima, acc.clima, '')}${fila('Actuación (1-4)', m.actuacion, acc.actuacion, '')}
@@ -3024,33 +3047,84 @@ function generarComparativaSemana() {
     { label: 'Intensidad', data: sem.map(s => s.m.int), borderColor: '#F59E0B', backgroundColor: '#F59E0B', tension: .3 },
     { label: 'Actitud', data: sem.map(s => s.m.act), borderColor: '#059669', backgroundColor: '#059669', tension: .3 }] },
     options: { plugins: { title: tituloCmp('Evolución semana a semana (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
-  grafCmp('cmp-evol-asis', { type: 'line', data: { labels: sem.map(s => s.et), datasets: [{ label: 'Asistencia %', data: sem.map(s => s.m.pctAsis), borderColor: V, backgroundColor: 'rgba(6,95,70,.15)', fill: true, tension: .3 }] },
-    options: { plugins: { title: tituloCmp('Evolución de la asistencia (%)'), legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
-  const J = jugs().filter(j => acc.jugadores[j] && acc.jugadores[j].val.length);
-  const med = a => a && a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
-  grafCmp('cmp-jug', { type: 'bar', data: { labels: J, datasets: [
-    { label: 'Esta semana', data: J.map(j => m.jugadores[j] ? med(m.jugadores[j].val) : null), backgroundColor: '#7C3AED' },
-    { label: 'Acumulado', data: J.map(j => med(acc.jugadores[j].val)), backgroundColor: G }] },
-    options: { indexAxis: 'y', plugins: { title: tituloCmp('Valoración por jugador: semana y acumulado (1-5)'), legend: { position: 'bottom' } }, scales: { x: { min: 0, max: 5 } } } });
-  grafCmp('cmp-disp', { type: 'scatter', data: { datasets: [{ label: 'Jugadores', data: J.filter(j => acc.jugadores[j].tot).map(j => ({ x: acc.jugadores[j].pres / acc.jugadores[j].tot * 100, y: med(acc.jugadores[j].val), j })),
-    backgroundColor: '#2563EB', pointRadius: 6 }] },
-    options: { plugins: { title: tituloCmp('Asistencia frente a valoración (acumulado)'), legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.j + ': ' + Math.round(c.raw.x) + ' % · ' + f1c(c.raw.y) } } },
-      scales: { x: { min: 0, max: 100, title: { display: true, text: 'Asistencia (%)' } }, y: { min: 0, max: 5, title: { display: true, text: 'Valoración' } } } } });
+  grafCmp('cmp-evol-asis', { type: 'bar', data: { labels: sem.map(s => s.et), datasets: [
+    { type: 'line', label: 'Asistencia %', data: sem.map(s => s.m.pctAsis), borderColor: V, backgroundColor: V, yAxisID: 'y', tension: .3 },
+    { label: 'Sesiones registradas', data: sem.map(s => new Set((data.Asistencia || []).filter(r => { const f = String(r.Fecha || '').slice(0, 10); return f >= isoMenos(s.fin || R.hasta, 6) && f <= (s.fin || R.hasta); }).map(r => String(r.Fecha).slice(0, 10))).size), backgroundColor: 'rgba(37,99,235,.35)', yAxisID: 'y2' }] },
+    options: { plugins: { title: tituloCmp('Asistencia y constancia del registro por semana'), legend: { position: 'bottom' } },
+      scales: { y: { min: 0, max: 100, position: 'left', title: { display: true, text: '%' } }, y2: { min: 0, suggestedMax: 4, position: 'right', grid: { drawOnChartArea: false }, ticks: { stepSize: 1 }, title: { display: true, text: 'Sesiones' } } } } });
+  // ── Por jugador, con ajuste por número de registros ──
+  const J = jugs().filter(j => acc.jugadores[j] && (acc.jugadores[j].val.length || acc.jugadores[j].tot));
+  const grupoVal = acc.valGlobal, grupoAs = acc.pctAsis;
+  const P = J.map(j => {
+    const a = acc.jugadores[j], n = a.val.length, bruto = medA(a.val), adj = ajustar(bruto, n, grupoVal, K_JUG);
+    const s = m.jugadores[j], ns = s ? s.val.length : 0, sb = s ? medA(s.val) : null, sadj = ajustar(sb, ns, grupoVal, K_JUG);
+    const asB = a.tot ? a.pres / a.tot * 100 : null, asAdj = a.tot ? (a.pres + K_JUG * (grupoAs || 0) / 100) / (a.tot + K_JUG) * 100 : null;
+    return { j, n, bruto, adj, ns, sb, sadj, nAs: a.tot, asB, asAdj };
+  });
+  grafCmp('cmp-jug', { type: 'bar', data: { labels: P.map(x => `${x.j} (${x.n})`), datasets: [
+    { label: 'Esta semana (ajustada)', data: P.map(x => x.sadj), backgroundColor: '#7C3AED' },
+    { label: 'Acumulado (ajustada)', data: P.map(x => x.adj), backgroundColor: G }] },
+    options: { indexAxis: 'y', plugins: { title: tituloCmp('Valoración por jugador ajustada por nº de registros · (n) = registros'), legend: { position: 'bottom' } }, scales: { x: { min: 0, max: 5 } } } });
+  grafCmp('cmp-disp', { type: 'bubble', data: { datasets: [{ label: 'Jugadores', data: P.filter(x => x.asAdj !== null && x.adj !== null).map(x => ({ x: x.asAdj, y: x.adj, r: 4 + Math.min(10, x.n), j: x.j, n: x.n })),
+    backgroundColor: 'rgba(37,99,235,.55)', borderColor: '#1d4ed8' }] },
+    options: { plugins: { title: tituloCmp('Asistencia frente a valoración (ajustadas) · tamaño = nº de registros'), legend: { display: false },
+      tooltip: { callbacks: { label: c => `${c.raw.j}: ${Math.round(c.raw.x)} % · ${f1c(c.raw.y)} · ${c.raw.n} registros` } } },
+      scales: { x: { min: 0, max: 100, title: { display: true, text: 'Asistencia ajustada (%)' } }, y: { min: 0, max: 5, title: { display: true, text: 'Valoración ajustada' } } } } });
   grafCmp('cmp-inc', { type: 'bar', data: { labels: ['Conflictos entreno', 'Conflictos partido', 'Amarillas', 'Rojas', 'Quejas'], datasets: [
     { label: 'Esta semana', data: [m.conflictosE, m.conflictosP, m.amarillas, m.rojas, m.quejas], backgroundColor: '#EA580C' },
     { label: 'Media semanal', data: [acc.conflictosE, acc.conflictosP, acc.amarillas, acc.rojas, acc.quejas].map(v => v / nSem), backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Incidencias: semana y media semanal'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
-  // Semáforo y jugadores por debajo de 2,5
-  const filas = J.map(j => { const sv = m.jugadores[j] ? med(m.jugadores[j].val) : null, av = med(acc.jugadores[j].val), ref = sv !== null ? sv : av;
-    const e = ref < 2.5 ? ['🔴 Prioridad', '#FEE2E2'] : ref < 3.5 ? ['🟡 Reforzar', '#FEF3C7'] : ['🟢 Bien', '#D1FAE5'];
-    return { j, sv, av, ref, e, asis: acc.jugadores[j].tot ? Math.round(acc.jugadores[j].pres / acc.jugadores[j].tot * 100) + ' %' : '—' }; });
-  const bajos = filas.filter(f => f.ref !== null && f.ref < 2.5);
-  document.getElementById('cmp-semaforo').innerHTML = `<div class="sep">🚦 Semáforo por jugador</div><div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Jugador</th><th>Semana</th><th>Acumulado</th><th>Asistencia</th><th>Estado</th></tr></thead><tbody>` +
-    filas.map(f => `<tr><td class="jn">${escI(f.j)}</td><td>${f1c(f.sv)}</td><td>${f1c(f.av)}</td><td>${f.asis}</td><td style="background:${f.e[1]};font-weight:700">${f.e[0]}</td></tr>`).join('') + `</tbody></table></div>` +
+  grafCmp('cmp-reg', { type: 'bar', data: { labels: P.map(x => x.j), datasets: [
+    { label: 'Valoraciones registradas', data: P.map(x => x.n), backgroundColor: '#F59E0B' }, { label: 'Asistencias registradas', data: P.map(x => x.nAs), backgroundColor: '#059669' }] },
+    options: { plugins: { title: tituloCmp('Número de registros por jugador'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+  const hist = (src) => [1, 2, 3, 4, 5].map(v => Object.values(src.jugadores).reduce((s, x) => s + x.val.filter(y => Math.round(y) === v).length, 0));
+  grafCmp('cmp-hist', { type: 'bar', data: { labels: ['1', '2', '3', '4', '5'], datasets: [{ label: 'Esta semana', data: hist(m), backgroundColor: V }, { label: 'Acumulado', data: hist(acc), backgroundColor: G }] },
+    options: { plugins: { title: tituloCmp('Distribución de valoraciones (nº de notas de cada valor)'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
+  const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], pd = [0, 0, 0, 0, 0, 0, 0], td = [0, 0, 0, 0, 0, 0, 0];
+  (data.Asistencia || []).forEach(r => { if (!r.Fecha || !r.Asistencia) return; const d = (new Date(String(r.Fecha).slice(0, 10) + 'T12:00:00').getDay() + 6) % 7; td[d]++; if (r.Asistencia === 'Presente') pd[d]++; });
+  const idx = dias.map((_, k) => k).filter(k => td[k]);
+  grafCmp('cmp-dia', { type: 'bar', data: { labels: idx.map(k => dias[k]), datasets: [{ label: 'Asistencia %', data: idx.map(k => Math.round(pd[k] / td[k] * 100)), backgroundColor: '#0891B2' }] },
+    options: { plugins: { title: tituloCmp('Asistencia por día de la semana (%)'), legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
+  comparativaConClub(acc);
+  // ── Semáforo ajustado ──
+  const bajos = P.filter(x => x.adj !== null && x.adj < 2.5);
+  document.getElementById('cmp-semaforo').innerHTML = `<div class="sep">🚦 Semáforo por jugador (ajustado por nº de registros)</div>
+    <div style="font-size:11px;color:#6B7280;margin-bottom:6px">La media ajustada tiene en cuenta cuántas veces se ha valorado a cada jugador: con pocos registros se acerca a la media del grupo (${f1c(grupoVal)}). Así, un jugador valorado 1 vez no queda por encima de otro valorado 15 veces.</div>
+    <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Jugador</th><th>Registros</th><th>Media real</th><th>Ajustada</th><th>Semana</th><th>Asistencia</th><th>Fiabilidad</th><th>Estado</th></tr></thead><tbody>` +
+    P.slice().sort((a, b) => (b.adj || 0) - (a.adj || 0)).map(x => { const fb = fiabilidad(x.n), ref = x.adj;
+      const e = ref === null ? ['—', '#F3F4F6'] : ref < 2.5 ? ['🔴 Prioridad', '#FEE2E2'] : ref < 3.5 ? ['🟡 Reforzar', '#FEF3C7'] : ['🟢 Bien', '#D1FAE5'];
+      return `<tr><td class="jn">${escI(x.j)}</td><td style="text-align:center">${x.n}</td><td style="text-align:center">${f1c(x.bruto)}</td><td style="text-align:center"><b>${f1c(x.adj)}</b></td><td style="text-align:center">${f1c(x.sb)}</td>
+        <td style="text-align:center">${x.asB === null ? '—' : Math.round(x.asB) + ' % (' + x.nAs + ')'}</td><td style="text-align:center;background:${fb[2]};color:${fb[1]};font-weight:700">${fb[0]}</td><td style="background:${e[1]};font-weight:700">${e[0]}</td></tr>`; }).join('') + `</tbody></table></div>` +
     (bajos.length ? `<div style="background:#FEF2F2;border-left:4px solid #991B1B;border-radius:6px;padding:9px 11px;margin-top:8px;font-size:12px">
-      <b>Jugadores con valoración inferior a 2,5:</b> ${bajos.map(f => escI(f.j)).join(', ')}.<br>
+      <b>Jugadores con valoración ajustada inferior a 2,5:</b> ${bajos.map(x => escI(x.j) + ' (' + x.n + ' registros)').join(', ')}.<br>
       Hasta disponer de las <b>hojas de consentimiento informado firmadas por las familias</b> (RGPD/LOPDGDD), no se realizará intervención individual con estos jugadores. Sí se dan <b>pautas al entrenador</b> para el trabajo en grupo.</div>` : '');
-  toast('✅ Comparativa semanal generada');
+  if (!silencioso) toast('✅ Comparativa semanal generada');
+}
+
+// Equipo frente a la media del club (con ajuste por nº de sesiones)
+async function comparativaConClub(acc) {
+  const box = document.getElementById('cmp-club'); if (!box) return;
+  window._datosEq = window._datosEq || {};
+  const eqs = Object.keys(EQUIPOS).map(k => EQUIPOS[k]).filter(e => (e.jugadores || []).length);
+  for (const e of eqs) {
+    if (window._datosEq[e.id]) continue;
+    try { const r = await fetch(GAS + '?accion=datos&equipo=' + encodeURIComponent(e.id)); const d = await r.json(); if (d && d.ok) window._datosEq[e.id] = d; } catch(err) {}
+  }
+  const filas = eqs.map(e => { const d = window._datosEq[e.id]; if (!d) return null; const a = metricasDatos(d, '0000-00-00', '9999-12-31'); if (!a.hay) return null;
+    return { e, a, ses: new Set((d.Asistencia || []).map(r => String(r.Fecha || '').slice(0, 10)).filter(Boolean)).size }; }).filter(Boolean);
+  if (filas.length < 2) { box.innerHTML = '<div style="font-size:11px;color:#6B7280">Comparativa con el club: hace falta que al menos otro equipo tenga registros.</div>'; return; }
+  const club = k => medA(filas.map(f => f.a[k]).filter(v => v !== null));
+  const adj = (f, k) => ajustar(f.a[k], f.ses, club(k), K_EQ);
+  const yo = filas.find(f => f.e.id === equipoActual.id); if (!yo) return;
+  const rank = k => filas.slice().sort((a, b) => (adj(b, k) || 0) - (adj(a, k) || 0)).findIndex(f => f === yo) + 1;
+  box.innerHTML = `<div class="sep">🏟️ ${escI(equipoActual.nombre)} frente a la media del club</div>
+    <div style="font-size:11px;color:#6B7280;margin-bottom:6px">Valores ajustados por el número de sesiones registradas (${yo.ses} en este equipo). Posición entre ${filas.length} equipos con datos.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${[['Asistencia', 'pctAsis', ' %'], ['Valoración', 'valGlobal', ''], ['Atención', 'ate', ''], ['Intensidad', 'int', ''], ['Actitud', 'act', '']].map(v =>
+      `<div style="flex:1;min-width:95px;background:#F9FAFB;border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:700;color:#374151">${v[0].toUpperCase()}</div><div style="font-size:15px;font-weight:900">${f1c(adj(yo, v[1]))}${v[2]}</div><div style="font-size:10px;color:#6B7280">club ${f1c(club(v[1]))}${v[2]} · ${rank(v[1])}.º</div></div>`).join('')}</div>`;
+  grafCmp('cmp-club-g', { type: 'bar', data: { labels: ['Atención', 'Intensidad', 'Actitud', 'Valoración'], datasets: [
+    { label: equipoActual.nombre + ' (ajustado)', data: [adj(yo, 'ate'), adj(yo, 'int'), adj(yo, 'act'), adj(yo, 'valGlobal')], backgroundColor: '#065F46' },
+    { label: 'Media del club', data: [club('ate'), club('int'), club('act'), club('valGlobal')], backgroundColor: '#9CA3AF' }] },
+    options: { plugins: { title: tituloCmp('Equipo frente a la media del club (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
 }
 
 async function generarComparativaEquipos() {
@@ -3063,34 +3137,50 @@ async function generarComparativaEquipos() {
     if (window._datosEq[e.id]) continue;
     try { const r = await fetch(GAS + '?accion=datos&equipo=' + encodeURIComponent(e.id)); const d = await r.json(); if (d && d.ok) window._datosEq[e.id] = d; } catch(err) {}
   }
-  const hasta = isoHoy(), desde = isoMenos(hasta, 6), pHasta = isoMenos(desde, 1), pDesde = isoMenos(pHasta, 6);
+  const hasta = isoHoy(), desde = isoMenos(hasta, 6), pDesde = isoMenos(desde, 7), pHasta = isoMenos(desde, 1);
   const filas = [], sinReg = [];
   eqs.forEach(e => {
     const d = window._datosEq[e.id]; if (!d) { sinReg.push(e); return; }
     const m = metricasDatos(d, desde, hasta), acc = metricasDatos(d, '0000-00-00', '9999-12-31'), prev = metricasDatos(d, pDesde, pHasta);
+    const fs = (d.Asistencia || []).map(r => String(r.Fecha || '').slice(0, 10)).filter(Boolean);
+    const ses = new Set(fs).size, sesSem = new Set(fs.filter(f => f >= desde && f <= hasta)).size;
+    const regs = ['Asistencia', 'Valoracion', 'ConflictoEntreno', 'Alineacion', 'ConflictoPartido', 'Quejas', 'Tarjetas'].reduce((s, t) => s + (d[t] || []).length, 0);
     if (!m.hay) sinReg.push(e);
     if (!acc.hay) return;
-    filas.push({ e, m, acc, c: clasificarCmp(m, prev, acc) });
+    filas.push({ e, m, acc, c: clasificarCmp(m, prev, acc), ses, sesSem, regs });
   });
+  const club = k => medA(filas.map(f => f.acc[k]).filter(v => v !== null));
+  filas.forEach(f => { f.adjAs = ajustar(f.acc.pctAsis, f.ses, club('pctAsis'), K_EQ); f.adjVal = ajustar(f.acc.valGlobal, f.ses, club('valGlobal'), K_EQ); f.fb = fiabilidad(f.ses); });
+  filas.sort((a, b) => (b.adjVal || 0) - (a.adjVal || 0));
   document.getElementById('cmp-eq').style.display = 'block';
-  document.getElementById('cmp-eq-tabla').innerHTML = `<div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Equipo</th><th>Asist. sem.</th><th>Asist. acum.</th><th>Valor. sem.</th><th>Valor. acum.</th><th>📈</th><th>➖</th><th>⚠️</th></tr></thead><tbody>` +
-    filas.map(f => `<tr><td class="jn">${escI(f.e.nombre)}</td><td>${f.m.pctAsis === null ? '—' : Math.round(f.m.pctAsis) + ' %'}</td><td style="color:#6B7280">${f.acc.pctAsis === null ? '—' : Math.round(f.acc.pctAsis) + ' %'}</td><td>${f1c(f.m.valGlobal)}</td><td style="color:#6B7280">${f1c(f.acc.valGlobal)}</td>
+  document.getElementById('cmp-eq-tabla').innerHTML = `<div style="font-size:11px;color:#6B7280;margin-bottom:4px">Ordenado por valoración <b>ajustada</b>: un equipo con pocas sesiones registradas se acerca a la media del club y no puede quedar por delante de otro que registra con constancia solo por tener pocos datos.</div>
+    <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Equipo</th><th>Sesiones</th><th>Registros</th><th>Fiabilidad</th><th>Asist. sem.</th><th>Asist. acum. (ajust.)</th><th>Valor. sem.</th><th>Valor. acum. (ajust.)</th><th>📈</th><th>➖</th><th>⚠️</th></tr></thead><tbody>` +
+    filas.map(f => `<tr><td class="jn">${escI(f.e.nombre)}</td><td>${f.ses} <span style="color:#6B7280">(${f.sesSem} sem.)</span></td><td>${f.regs}</td><td style="background:${f.fb[2]};color:${f.fb[1]};font-weight:700">${f.fb[0]}</td>
+      <td>${f.m.pctAsis === null ? '—' : Math.round(f.m.pctAsis) + ' %'}</td><td>${f.adjAs === null ? '—' : Math.round(f.adjAs) + ' %'}</td><td>${f1c(f.m.valGlobal)}</td><td><b>${f1c(f.adjVal)}</b></td>
       <td style="color:#065F46;font-weight:800">${f.c.mejorado.length}</td><td style="color:#1E40AF;font-weight:800">${f.c.mantenido.length}</td><td style="color:#991B1B;font-weight:800">${f.c.aMejorar.length}</td></tr>`).join('') + `</tbody></table></div>
-    <div style="font-size:11px;color:#6B7280;margin-top:4px">Semana: ${desde.split('-').reverse().join('/')} – ${hasta.split('-').reverse().join('/')}</div>`;
+    <div style="font-size:11px;color:#6B7280;margin-top:4px">Semana: ${desde.split('-').reverse().join('/')} – ${hasta.split('-').reverse().join('/')} · Fiabilidad según sesiones registradas (alta ≥ 8, media 3-7, baja &lt; 3).</div>`;
   const L = filas.map(f => f.e.nombre), G = '#9CA3AF';
-  grafCmp('cmpe-asis', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.pctAsis), backgroundColor: '#059669' }, { label: 'Acumulado', data: filas.map(f => f.acc.pctAsis), backgroundColor: G }] },
+  grafCmp('cmpe-asis', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.pctAsis), backgroundColor: '#059669' }, { label: 'Acumulado (ajustado)', data: filas.map(f => f.adjAs), backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Asistencia (%) por equipo'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 100 } } } });
-  grafCmp('cmpe-val', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.valGlobal), backgroundColor: '#7C3AED' }, { label: 'Acumulado', data: filas.map(f => f.acc.valGlobal), backgroundColor: G }] },
+  grafCmp('cmpe-val', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.valGlobal), backgroundColor: '#7C3AED' }, { label: 'Acumulado (ajustado)', data: filas.map(f => f.adjVal), backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Valoración media por equipo (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
-  grafCmp('cmpe-dims', { type: 'bar', data: { labels: L, datasets: [{ label: 'Atención', data: filas.map(f => f.acc.ate), backgroundColor: '#2563EB' }, { label: 'Intensidad', data: filas.map(f => f.acc.int), backgroundColor: '#F59E0B' }, { label: 'Actitud', data: filas.map(f => f.acc.act), backgroundColor: '#059669' }] },
-    options: { plugins: { title: tituloCmp('Atención, intensidad y actitud (acumulado)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
-  grafCmp('cmpe-inc', { type: 'bar', data: { labels: L, datasets: [{ label: 'Conflictos', data: filas.map(f => f.acc.conflictosE + f.acc.conflictosP), backgroundColor: '#EA580C' }, { label: 'Tarjetas', data: filas.map(f => f.acc.amarillas + f.acc.rojas), backgroundColor: '#EAB308' }, { label: 'Quejas', data: filas.map(f => f.acc.quejas), backgroundColor: '#2563EB' }] },
-    options: { plugins: { title: tituloCmp('Incidencias acumuladas por equipo'), legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+  grafCmp('cmpe-dims', { type: 'bar', data: { labels: L, datasets: [
+    { label: 'Atención', data: filas.map(f => ajustar(f.acc.ate, f.ses, club('ate'), K_EQ)), backgroundColor: '#2563EB' },
+    { label: 'Intensidad', data: filas.map(f => ajustar(f.acc.int, f.ses, club('int'), K_EQ)), backgroundColor: '#F59E0B' },
+    { label: 'Actitud', data: filas.map(f => ajustar(f.acc.act, f.ses, club('act'), K_EQ)), backgroundColor: '#059669' }] },
+    options: { plugins: { title: tituloCmp('Atención, intensidad y actitud (ajustadas)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
+  grafCmp('cmpe-inc', { type: 'bar', data: { labels: L, datasets: [
+    { label: 'Conflictos / sesión', data: filas.map(f => (f.acc.conflictosE + f.acc.conflictosP) / Math.max(1, f.ses)), backgroundColor: '#EA580C' },
+    { label: 'Tarjetas / sesión', data: filas.map(f => (f.acc.amarillas + f.acc.rojas) / Math.max(1, f.ses)), backgroundColor: '#EAB308' },
+    { label: 'Quejas / sesión', data: filas.map(f => f.acc.quejas / Math.max(1, f.ses)), backgroundColor: '#2563EB' }] },
+    options: { plugins: { title: tituloCmp('Incidencias por sesión registrada'), legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+  grafCmp('cmpe-reg', { type: 'bar', data: { labels: L, datasets: [{ label: 'Sesiones registradas', data: filas.map(f => f.ses), backgroundColor: '#1C2B4A' }, { label: 'Esta semana', data: filas.map(f => f.sesSem), backgroundColor: '#60A5FA' }] },
+    options: { plugins: { title: tituloCmp('Constancia del registro por equipo'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
   grafCmp('cmpe-bal', { type: 'bar', data: { labels: L, datasets: [{ label: 'Ha mejorado', data: filas.map(f => f.c.mejorado.length), backgroundColor: '#059669' }, { label: 'Se ha mantenido', data: filas.map(f => f.c.mantenido.length), backgroundColor: '#2563EB' }, { label: 'Debe mejorar', data: filas.map(f => f.c.aMejorar.length), backgroundColor: '#DC2626' }] },
     options: { indexAxis: 'y', plugins: { title: tituloCmp('Balance de cada equipo'), legend: { position: 'bottom' } }, scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } } } });
   document.getElementById('cmp-eq-detalle').innerHTML =
     (sinReg.length ? `<div style="background:#FEF3C7;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px"><b>📭 Sin registros esta semana:</b> ${sinReg.map(e => escI(e.nombre) + (e.entrenador && e.entrenador !== '—' ? ' (' + escI(e.entrenador) + ')' : '')).join(', ')}</div>` : '') +
-    filas.map(f => `<div style="margin-top:10px"><div style="font-weight:800;color:#1C2B4A;font-size:13px">⚽ ${escI(f.e.nombre)}</div>${htmlBalance(f.c)}</div>`).join('');
+    filas.map(f => `<div style="margin-top:10px"><div style="font-weight:800;color:#1C2B4A;font-size:13px">⚽ ${escI(f.e.nombre)} <span style="font-weight:600;font-size:11px;color:#6B7280">· ${f.ses} sesiones · fiabilidad ${f.fb[0].toLowerCase()}</span></div>${htmlBalance(f.c)}</div>`).join('');
   toast('✅ Comparativa de equipos generada');
 }
 
@@ -3299,6 +3389,7 @@ async function marcarIncidencia(id, estado) {
 function actualizarStatsAuto() {
   reconstruirEntreno();
   calcularStatsEntreno();
+  if (isNefta) setTimeout(() => { try { generarComparativaSemana(true); } catch(e) {} }, 300);
   try { pintarFaltas(); } catch(e) {}
   calcularStatsPartido();
   if (isNefta) mostrarStatsIndividuales();
