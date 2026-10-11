@@ -247,11 +247,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <div class="eq-detail">Entrenador: Javier Pozo Muñoz · 18 jugadores</div>
         </div><span class="eq-arrow">›</span>
       </button>
-      <button class="eq-btn" onclick="abrirEquipo('infantil')">
+      <button class="eq-btn" onclick="abrirEquipo('infantil')" style="border-left:3px solid var(--verde)">
         <span class="eq-icon"><span class="escudo-mini"></span></span>
         <div class="eq-info">
-          <div class="eq-name">Infantil F-11</div>
-          <div class="eq-detail">Entrenador: Joaquín Bagur · Sub 13 Preferente · Mar/Jue/Vie</div>
+          <div class="eq-name">Infantil F-11 <span style="font-size:10px;background:var(--verde-p);color:var(--verde);padding:1px 6px;border-radius:10px;font-weight:700;margin-left:4px">✓ Configurado</span></div>
+          <div class="eq-detail">Entrenador: Joaquín Bagur · 17 jugadores · Sub 13 Preferente · Mar/Jue/Vie</div>
         </div><span class="eq-arrow">›</span>
       </button>
     </div>
@@ -1096,7 +1096,7 @@ const EQUIPOS = {
   },
   infantil:   {
     nombre:'Infantil F-11', detalle:'Sub 13 Preferente Mallorca', id:'InfantilF11',
-    entrenador:'Joaquín Bagur', password:'b0707af0bd264604f0a9df0bbc10fedfa35d1024cab1b0e02d26ff2b2bfa785f', jugadores:[],
+    entrenador:'Joaquín Bagur', password:'b0707af0bd264604f0a9df0bbc10fedfa35d1024cab1b0e02d26ff2b2bfa785f', jugadores:['Adam A.','Max A.','Mario R.','Adam E.','Miquel A.','Elias M.','Felipe S.','Gero G.','Luca H.','Marc L.','Marc S.','Alberto M.','Juanjo P.','Logan O.','Michael D.','Thiago O.','Matías'],
     horarios:'Mar · Campo D · 17:30–19:00 | Jue · Campo D · 17:30–19:00 | Vie · Campo C y D · 17:30–19:00'
   },
   alevinA:    {
