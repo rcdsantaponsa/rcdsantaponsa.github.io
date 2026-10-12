@@ -390,6 +390,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
   </nav>
   <main>
+    <div id="constancia" style="display:none"></div>
 
     <!-- CALENDARIO DE PARTIDOS -->
     <div class="seccion" id="tab-calendario">
@@ -424,6 +425,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           </div>
         </div>
         <div class="sep">Jugadores</div>
+        <button type="button" onclick="marcarTodosPresentes()" style="background:#ECFDF5;color:#065F46;border:1.5px solid #065F46;border-radius:8px;padding:8px 12px;font-weight:800;font-size:12px;cursor:pointer;margin-bottom:8px">✅ Todos presentes <span style="font-weight:600">(después marca solo a quien faltó)</span></button>
         <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Jugador</th><th>Asistencia</th><th>Motivo</th></tr></thead><tbody id="tb-asistencia"></tbody></table></div>
         <div class="field" style="margin-top:10px"><label>Observaciones</label><textarea id="as-obs" placeholder="Objetivos, incidencias, dinámica del grupo..."></textarea></div>
         <button class="btn btn-v" onclick="guardar('asistencia')" id="btn-as">💾 Guardar asistencia</button>
@@ -601,6 +603,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
             <div class="card" style="padding:10px"><canvas id="cmp-hist" height="260"></canvas></div>
             <div class="card" style="padding:10px"><canvas id="cmp-dia" height="260"></canvas></div>
           </div>
+          <div id="cmp-calidad" style="margin-top:12px"></div>
+          <div class="sep" style="margin-top:14px">⚖️ Entrenamiento frente a partido</div>
+          <div id="cmp-ep-txt"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px">
+            <div class="card" style="padding:10px"><canvas id="cmp-ep-g" height="250"></canvas></div>
+            <div class="card" style="padding:10px"><canvas id="cmp-ep-jug" height="250"></canvas></div>
+          </div>
+          <div id="cmp-ep-bal"></div>
           <div id="cmp-club" style="margin-top:12px"></div>
           <div class="card" style="padding:10px;margin-top:8px"><canvas id="cmp-club-g" height="230"></canvas></div>
           <div id="cmp-semaforo" style="margin-top:12px"></div>
@@ -1805,6 +1815,8 @@ async function guardar(tipo) {
     } else {
       toast('✅ Guardado y confirmado en Google Sheets');
     }
+    if (tipo === 'asistencia') setTimeout(() => { try { irAValoracion(); } catch(e) {} }, 900);
+    if (tipo === 'asistencia' || tipo === 'valoracion') { try { actualizarConstancia(); } catch(e) {} }
   } catch(e) {
     toast('❌ Error al guardar', true);
   } finally {
@@ -3001,6 +3013,142 @@ function htmlBalance(c) {
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${col('📈 Ha mejorado', c.mejorado, '#ECFDF5', '#065F46')}${col('➖ Se ha mantenido', c.mantenido, '#EFF6FF', '#1E40AF')}${col('⚠️ Debe mejorar', c.aMejorar, '#FEF2F2', '#991B1B')}</div>`;
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FIABILIDAD DEL REGISTRO · cobertura, completitud, puntualidad y discriminación
+// ══════════════════════════════════════════════════════════════════════════════
+function horarioDe(cfg) {
+  return String((cfg && cfg.horarios) || '').split('|').map(t => {
+    const p = t.split('·').map(x => x.trim()), d = DIAS_CORTOS[(p[0] || '').toLowerCase().slice(0, 3)];
+    return d === undefined ? null : d;
+  }).filter(d => d !== null);
+}
+function calidadRegistro(data, cfg) {
+  const f10 = v => String(v || '').slice(0, 10), hoy = isoLocal(new Date());
+  const as = (data.Asistencia || []).filter(r => r.Asistencia), va = data.Valoracion || [];
+  const ses = [...new Set(as.map(r => f10(r.Fecha)).filter(Boolean))].sort();
+  const plantilla = (cfg.jugadores || []).length || 1, dias = horarioDe(cfg);
+  // Sesiones previstas desde el primer registro hasta ayer (o hasta hoy si ya hay registro de hoy)
+  let previstas = 0;
+  if (ses.length && dias.length) {
+    for (let d = new Date(ses[0] + 'T12:00:00'); isoLocal(d) <= hoy; d.setDate(d.getDate() + 1)) {
+      if (dias.includes(d.getDay()) && (isoLocal(d) < hoy || ses.includes(isoLocal(d)))) previstas++;
+    }
+  }
+  const cobertura = previstas ? Math.min(1, ses.length / previstas) : (ses.length ? 1 : 0);
+  // Completitud: asistencia de toda la plantilla y valoración de los presentes
+  const comp = ses.map(f => {
+    const a = as.filter(r => f10(r.Fecha) === f), pres = a.filter(r => r.Asistencia === 'Presente').length;
+    const v = va.filter(r => f10(r.Fecha) === f && r.Atencion && r.Atencion !== '—').length;
+    return (Math.min(1, a.length / plantilla) + (pres ? Math.min(1, v / pres) : 1)) / 2;
+  });
+  const completitud = comp.length ? comp.reduce((s, x) => s + x, 0) / comp.length : 0;
+  // Puntualidad: registros guardados el mismo día o el siguiente
+  const conTs = as.concat(va).filter(r => r.Timestamp && r.Fecha);
+  const puntualidad = conTs.length ? conTs.filter(r => (Date.parse(String(r.Timestamp).slice(0, 10)) - Date.parse(f10(r.Fecha))) / 864e5 <= 1).length / conTs.length : 1;
+  // Discriminación: sesiones en las que no se puso la misma nota a todos
+  const sesVal = [...new Set(va.map(r => f10(r.Fecha)))];
+  const discr = sesVal.length ? sesVal.filter(f => new Set(va.filter(r => f10(r.Fecha) === f).map(r => [r.Atencion, r.Intensidad, r.Actitud].join('-'))).size > 1).length / sesVal.length : 1;
+  const indice = Math.round((cobertura * .5 + completitud * .25 + puntualidad * .15 + discr * .10) * 100);
+  const nivel = indice >= 75 ? ['Alta', '#065F46', '#D1FAE5'] : indice >= 50 ? ['Media', '#92400E', '#FEF3C7'] : ['Baja', '#991B1B', '#FEE2E2'];
+  return { sesiones: ses.length, previstas, cobertura, completitud, puntualidad, discr, indice, nivel, nEff: ses.length * completitud };
+}
+function htmlCalidad(q, titulo) {
+  const pct = x => Math.round(x * 100) + ' %';
+  const kp = (t, v, ok) => `<div style="flex:1;min-width:95px;background:${ok ? '#ECFDF5' : '#FEF2F2'};border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:700;color:#374151">${t}</div><div style="font-size:15px;font-weight:900;color:${ok ? '#065F46' : '#991B1B'}">${v}</div></div>`;
+  return `<div class="sep">🔎 ${titulo}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="flex:1.3;min-width:120px;background:${q.nivel[2]};border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:700">ÍNDICE DE FIABILIDAD</div><div style="font-size:20px;font-weight:900;color:${q.nivel[1]}">${q.indice}/100</div><div style="font-size:10px;font-weight:800;color:${q.nivel[1]}">${q.nivel[0]}</div></div>
+      ${kp('COBERTURA', q.sesiones + ' de ' + (q.previstas || q.sesiones) + ' sesiones', q.cobertura >= .75)}${kp('COMPLETITUD', pct(q.completitud), q.completitud >= .8)}${kp('PUNTUALIDAD', pct(q.puntualidad), q.puntualidad >= .8)}${kp('NOTAS DIFERENCIADAS', pct(q.discr), q.discr >= .8)}
+    </div>
+    <div style="font-size:10px;color:#6B7280;margin-top:4px">Cobertura: entrenamientos registrados frente a los previstos en el horario · Completitud: asistencia de toda la plantilla y valoración de los presentes · Puntualidad: registrado el mismo día o al siguiente · Notas diferenciadas: sesiones en las que no se puso la misma nota a todos.</div>`;
+}
+
+// ── Más fácil de registrar ────────────────────────────────────────────────
+function marcarTodosPresentes() {
+  document.querySelectorAll('#tb-asistencia input[value="Presente"]').forEach(r => { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); });
+  toast('✅ Todos presentes. Marca ahora solo a quien faltó.');
+}
+function irAValoracion() {
+  const f = (document.getElementById('as-fecha') || {}).value;
+  const J = jugs(), aus = J.map((j, i) => { const c = document.querySelector(`input[name="as-j-${i}"]:checked`); return c && c.value !== 'Presente'; });
+  const btn = [...document.querySelectorAll('#tabs-e .tab-btn')].find(b => /Valoraci/.test(b.textContent)); if (!btn) return;
+  setTab('valoracion', btn); document.querySelectorAll('#tabs-e .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  const vf = document.getElementById('va-fecha'); if (vf && f) { vf.value = f; vf.dispatchEvent(new Event('change', { bubbles: true })); }
+  const filas = document.querySelectorAll('#tb-valoracion tr');
+  filas.forEach((tr, i) => {
+    tr.style.opacity = aus[i] ? '.35' : '1';
+    const c = tr.querySelector('td'); if (!c) return;
+    c.querySelectorAll('.aus-tag').forEach(x => x.remove());
+    if (aus[i]) c.insertAdjacentHTML('beforeend', '<div class="aus-tag" style="font-size:9px;color:#991B1B;font-weight:800">Ausente hoy</div>');
+  });
+  toast('⭐ Ahora la valoración: solo de los jugadores presentes (' + aus.filter(x => !x).length + ').');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ENTRENAMIENTO FRENTE A PARTIDO (solo Nefta)
+// ══════════════════════════════════════════════════════════════════════════════
+function entrenoVsPartido(data) {
+  const box = document.getElementById('cmp-ep-txt'); if (!box) return;
+  const f10 = v => String(v || '').slice(0, 10);
+  const pts = t => { t = String(t || ''); return /excelente/i.test(t) ? 4 : /muy buena/i.test(t) ? 3 : /buena/i.test(t) ? 2 : /mejorable|regular/i.test(t) ? 1 : null; };
+  const al = data.Alineacion || [], partidos = [...new Set(al.map(r => f10(r.Fecha)))].sort();
+  if (!partidos.length) { box.innerHTML = '<div style="font-size:12px;color:#6B7280">Todavía no hay partidos registrados en la Alineación para comparar con los entrenamientos.</div>'; document.getElementById('cmp-ep-bal').innerHTML = ''; return; }
+  const sesiones = [...new Set((data.Asistencia || []).map(r => f10(r.Fecha)).filter(Boolean))];
+  const resumen = (desde, hasta) => {
+    const m = metricasDatos(data, desde, hasta);
+    const nSes = sesiones.filter(f => f >= desde && f <= hasta).length, nPar = partidos.filter(f => f >= desde && f <= hasta).length;
+    const confE = nSes ? m.conflictosE / nSes : null, confP = nPar ? (m.conflictosP + m.amarillas + m.rojas + m.quejas) / nPar : null;
+    return {
+      rendE: m.valGlobal === null ? null : (m.valGlobal - 1) / 4 * 100,               // 1-5 → 0-100
+      rendP: m.actuacion === null ? null : (m.actuacion - 1) / 3 * 100,               // 1-4 → 0-100
+      convE: confE === null ? null : Math.max(0, 100 - confE * 100),                  // 0 incidencias = 100
+      convP: confP === null ? null : Math.max(0, 100 - confP * 50),
+      partE: m.pctAsis,
+      partP: (() => { const a = al.filter(r => f10(r.Fecha) >= desde && f10(r.Fecha) <= hasta); return a.length ? a.filter(r => (parseFloat(r.Minutos) || 0) > 0 || /s[ií]/i.test(r.Titular || '')).length / a.length * 100 : null; })(),
+      nSes, nPar
+    };
+  };
+  const acc = resumen('0000-00-00', '9999-12-31');
+  const ult = partidos[partidos.length - 1], hasta = isoLocal(new Date()), desde = isoMenos(hasta, 6), pH = isoMenos(desde, 1), pD = isoMenos(pH, 6);
+  const sem = resumen(desde, hasta), prev = resumen(pD, pH);
+  const f1p = x => x === null || x === undefined ? '—' : Math.round(x) + '';
+  box.innerHTML = `<div style="font-size:11px;color:#6B7280;margin-bottom:6px">Todo en escala 0-100 para poder comparar: <b>rendimiento</b> (valoración en entreno · actuación en partido), <b>convivencia</b> (menos incidencias = más alto) y <b>participación</b> (asistencia en entreno · jugadores con minutos en partido). ${acc.nSes} entrenamientos y ${acc.nPar} partidos registrados.</div>
+    <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Aspecto</th><th>Entreno</th><th>Partido</th><th>Diferencia</th><th>Lectura</th></tr></thead><tbody>${
+      [['Rendimiento', acc.rendE, acc.rendP], ['Convivencia', acc.convE, acc.convP], ['Participación', acc.partE, acc.partP]].map(([n, e, p]) => {
+        const d = (e === null || p === null) ? null : p - e;
+        const l = d === null ? '—' : Math.abs(d) < 10 ? '🟢 Se mantiene igual en partido' : d < 0 ? '🔴 Baja en partido: trabajar la transferencia' : '🔵 Mejor en partido que en entreno';
+        return `<tr><td style="text-align:left;padding-left:7px"><b>${n}</b></td><td>${f1p(e)}</td><td>${f1p(p)}</td><td>${d === null ? '—' : (d > 0 ? '+' : '') + Math.round(d)}</td><td style="text-align:left">${l}</td></tr>`; }).join('')}</tbody></table></div>`;
+  grafCmp('cmp-ep-g', { type: 'bar', data: { labels: ['Rendimiento', 'Convivencia', 'Participación'], datasets: [
+    { label: 'Entrenamiento', data: [acc.rendE, acc.convE, acc.partE], backgroundColor: '#065F46' }, { label: 'Partido', data: [acc.rendP, acc.convP, acc.partP], backgroundColor: '#C2410C' }] },
+    options: { plugins: { title: tituloCmp('Entrenamiento frente a partido (0-100)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 100 } } } });
+  // Por jugador: valoración en entreno frente a actuación en partido
+  const accM = metricasDatos(data, '0000-00-00', '9999-12-31'), J = jugs();
+  const actJ = {}; al.forEach(r => { const p = pts(r.Actuacion); if (p !== null) (actJ[nombreEnPlantilla(r.Jugador)] = actJ[nombreEnPlantilla(r.Jugador)] || []).push(p); });
+  const P = J.filter(j => accM.jugadores[j] && accM.jugadores[j].val.length && actJ[j]).map(j => {
+    const e = ajustar(medA(accM.jugadores[j].val), accM.jugadores[j].val.length, accM.valGlobal, K_JUG), pm = medA(actJ[j]);
+    return { j, x: (e - 1) / 4 * 100, y: (ajustar(pm, actJ[j].length, accM.actuacion, 3) - 1) / 3 * 100, nE: accM.jugadores[j].val.length, nP: actJ[j].length };
+  });
+  grafCmp('cmp-ep-jug', { type: 'scatter', data: { datasets: [{ label: 'Jugadores', data: P, backgroundColor: P.map(p => p.y - p.x < -15 ? '#DC2626' : p.y - p.x > 15 ? '#2563EB' : '#059669'), pointRadius: 7 }] },
+    options: { plugins: { title: tituloCmp('Por jugador: entreno frente a partido (0-100, ajustado)'), legend: { display: false },
+      tooltip: { callbacks: { label: c => `${c.raw.j}: entreno ${Math.round(c.raw.x)} · partido ${Math.round(c.raw.y)} (${c.raw.nE} entrenos, ${c.raw.nP} partidos)` } } },
+      scales: { x: { min: 0, max: 100, title: { display: true, text: 'Entrenamiento' } }, y: { min: 0, max: 100, title: { display: true, text: 'Partido' } } } } });
+  const baja = P.filter(p => p.y - p.x < -15), sube = P.filter(p => p.y - p.x > 15);
+  // Balance de la semana por contexto
+  const clas = (a, b, invert) => (a === null || b === null) ? null : (invert ? b - a : a - b);
+  const linea = (n, a, b) => { const d = clas(a, b); return d === null ? null : { n: n + ': ' + Math.round(a) + (b !== null ? ' (antes ' + Math.round(b) + ')' : ''), d }; };
+  const grupos = { mejorado: [], mantenido: [], aMejorar: [] };
+  [['Rendimiento en entreno', sem.rendE, prev.rendE], ['Rendimiento en partido', sem.rendP, prev.rendP], ['Convivencia en entreno', sem.convE, prev.convE],
+   ['Convivencia en partido', sem.convP, prev.convP], ['Participación en entreno', sem.partE, prev.partE], ['Participación en partido', sem.partP, prev.partP]].forEach(([n, a, b]) => {
+    if (a === null) return; const l = linea(n, a, b);
+    if (!l || b === null) { (a < 60 ? grupos.aMejorar : grupos.mantenido).push(n + ': ' + Math.round(a)); return; }
+    (l.d >= 8 ? grupos.mejorado : (l.d <= -8 || a < 60) ? grupos.aMejorar : grupos.mantenido).push(l.n);
+  });
+  document.getElementById('cmp-ep-bal').innerHTML = htmlBalance(grupos) +
+    (baja.length ? `<div style="background:#FEF2F2;border-radius:8px;padding:7px 10px;margin-top:6px;font-size:12px"><b>Rinden menos en partido que en entreno:</b> ${baja.map(p => escI(p.j)).join(', ')}. Pauta: trasladar al entreno situaciones de partido (presión, marcador, público) y feedback inmediato.</div>` : '') +
+    (sube.length ? `<div style="background:#EFF6FF;border-radius:8px;padding:7px 10px;margin-top:6px;font-size:12px"><b>Rinden más en partido que en entreno:</b> ${sube.map(p => escI(p.j)).join(', ')}. Pauta: aumentar la exigencia y los retos en los entrenamientos.</div>` : '');
+}
+
 // ── Ajuste por número de registros ─────────────────────────────────────────
 // Media «ajustada» (bayesiana): con pocos registros, el valor se acerca a la media
 // del grupo; con muchos, pesa su propia media. Así 1 registro de 5 no supera a 15 de 4,5.
@@ -3085,6 +3233,8 @@ function generarComparativaSemana(silencioso) {
   const idx = dias.map((_, k) => k).filter(k => td[k]);
   grafCmp('cmp-dia', { type: 'bar', data: { labels: idx.map(k => dias[k]), datasets: [{ label: 'Asistencia %', data: idx.map(k => Math.round(pd[k] / td[k] * 100)), backgroundColor: '#0891B2' }] },
     options: { plugins: { title: tituloCmp('Asistencia por día de la semana (%)'), legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
+  try { document.getElementById('cmp-calidad').innerHTML = htmlCalidad(calidadRegistro(data, equipoActual), 'Fiabilidad del registro de ' + escI(equipoActual.nombre)); } catch(e) {}
+  try { entrenoVsPartido(data); } catch(e) { console.log(e); }
   comparativaConClub(acc);
   // ── Semáforo ajustado ──
   const bajos = P.filter(x => x.adj !== null && x.adj < 2.5);
@@ -3149,16 +3299,19 @@ async function generarComparativaEquipos() {
     if (!acc.hay) return;
     filas.push({ e, m, acc, c: clasificarCmp(m, prev, acc), ses, sesSem, regs });
   });
-  const club = k => medA(filas.map(f => f.acc[k]).filter(v => v !== null));
-  filas.forEach(f => { f.adjAs = ajustar(f.acc.pctAsis, f.ses, club('pctAsis'), K_EQ); f.adjVal = ajustar(f.acc.valGlobal, f.ses, club('valGlobal'), K_EQ); f.fb = fiabilidad(f.ses); });
-  filas.sort((a, b) => (b.adjVal || 0) - (a.adjVal || 0));
+  filas.forEach(f => { f.q = calidadRegistro(window._datosEq[f.e.id], f.e); });
+  const fiables = filas.filter(f => f.q.indice >= 50), insuf = filas.filter(f => f.q.indice < 50);
+  const base = fiables.length ? fiables : filas;
+  const club = k => medA(base.map(f => f.acc[k]).filter(v => v !== null));
+  filas.forEach(f => { f.adjAs = ajustar(f.acc.pctAsis, f.q.nEff, club('pctAsis'), K_EQ); f.adjVal = ajustar(f.acc.valGlobal, f.q.nEff, club('valGlobal'), K_EQ); f.fb = f.q.nivel; });
+  filas.sort((a, b) => (b.q.indice >= 50) - (a.q.indice >= 50) || (b.adjVal || 0) - (a.adjVal || 0));
   document.getElementById('cmp-eq').style.display = 'block';
-  document.getElementById('cmp-eq-tabla').innerHTML = `<div style="font-size:11px;color:#6B7280;margin-bottom:4px">Ordenado por valoración <b>ajustada</b>: un equipo con pocas sesiones registradas se acerca a la media del club y no puede quedar por delante de otro que registra con constancia solo por tener pocos datos.</div>
-    <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Equipo</th><th>Sesiones</th><th>Registros</th><th>Fiabilidad</th><th>Asist. sem.</th><th>Asist. acum. (ajust.)</th><th>Valor. sem.</th><th>Valor. acum. (ajust.)</th><th>📈</th><th>➖</th><th>⚠️</th></tr></thead><tbody>` +
-    filas.map(f => `<tr><td class="jn">${escI(f.e.nombre)}</td><td>${f.ses} <span style="color:#6B7280">(${f.sesSem} sem.)</span></td><td>${f.regs}</td><td style="background:${f.fb[2]};color:${f.fb[1]};font-weight:700">${f.fb[0]}</td>
+  document.getElementById('cmp-eq-tabla').innerHTML = `<div style="font-size:11px;color:#6B7280;margin-bottom:4px">Primero los equipos con datos <b>fiables</b> (índice ≥ 50), ordenados por valoración ajustada. Los equipos que registran poco aparecen atenuados como <b>«no comparable»</b> y no se usan para calcular la media del club.</div>
+    <div style="overflow-x:auto"><table class="jt"><thead><tr><th style="text-align:left;padding-left:7px">Equipo</th><th>Cobertura</th><th>Completitud</th><th>Fiabilidad</th><th>Asist. sem.</th><th>Asist. acum. (ajust.)</th><th>Valor. sem.</th><th>Valor. acum. (ajust.)</th><th>📈</th><th>➖</th><th>⚠️</th></tr></thead><tbody>` +
+    filas.map(f => `<tr style="${f.q.indice < 50 ? 'opacity:.55' : ''}"><td class="jn">${escI(f.e.nombre)}${f.q.indice < 50 ? '<div style="font-size:9px;color:#991B1B">no comparable</div>' : ''}</td><td>${f.q.sesiones}/${f.q.previstas || f.q.sesiones}</td><td>${Math.round(f.q.completitud * 100)} %</td><td style="background:${f.fb[2]};color:${f.fb[1]};font-weight:700">${f.q.indice} · ${f.fb[0]}</td>
       <td>${f.m.pctAsis === null ? '—' : Math.round(f.m.pctAsis) + ' %'}</td><td>${f.adjAs === null ? '—' : Math.round(f.adjAs) + ' %'}</td><td>${f1c(f.m.valGlobal)}</td><td><b>${f1c(f.adjVal)}</b></td>
       <td style="color:#065F46;font-weight:800">${f.c.mejorado.length}</td><td style="color:#1E40AF;font-weight:800">${f.c.mantenido.length}</td><td style="color:#991B1B;font-weight:800">${f.c.aMejorar.length}</td></tr>`).join('') + `</tbody></table></div>
-    <div style="font-size:11px;color:#6B7280;margin-top:4px">Semana: ${desde.split('-').reverse().join('/')} – ${hasta.split('-').reverse().join('/')} · Fiabilidad según sesiones registradas (alta ≥ 8, media 3-7, baja &lt; 3).</div>`;
+    <div style="font-size:11px;color:#6B7280;margin-top:4px">Semana: ${desde.split('-').reverse().join('/')} – ${hasta.split('-').reverse().join('/')} · Índice de fiabilidad = 50 % cobertura del horario + 25 % completitud + 15 % puntualidad + 10 % notas diferenciadas (alta ≥ 75, media 50-74, baja &lt; 50).</div>`;
   const L = filas.map(f => f.e.nombre), G = '#9CA3AF';
   grafCmp('cmpe-asis', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.pctAsis), backgroundColor: '#059669' }, { label: 'Acumulado (ajustado)', data: filas.map(f => f.adjAs), backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Asistencia (%) por equipo'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 100 } } } });
@@ -3179,9 +3332,86 @@ async function generarComparativaEquipos() {
   grafCmp('cmpe-bal', { type: 'bar', data: { labels: L, datasets: [{ label: 'Ha mejorado', data: filas.map(f => f.c.mejorado.length), backgroundColor: '#059669' }, { label: 'Se ha mantenido', data: filas.map(f => f.c.mantenido.length), backgroundColor: '#2563EB' }, { label: 'Debe mejorar', data: filas.map(f => f.c.aMejorar.length), backgroundColor: '#DC2626' }] },
     options: { indexAxis: 'y', plugins: { title: tituloCmp('Balance de cada equipo'), legend: { position: 'bottom' } }, scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } } } });
   document.getElementById('cmp-eq-detalle').innerHTML =
+    (insuf.length ? `<div style="background:#FEF2F2;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px"><b>⚠️ Datos insuficientes para comparar:</b> ${insuf.map(f => escI(f.e.nombre) + ' (registra ' + f.q.sesiones + ' de ' + (f.q.previstas || '?') + ' sesiones, completitud ' + Math.round(f.q.completitud * 100) + ' %)').join(' · ')}. Sus datos se muestran, pero no entran en el ranking ni en la media del club.</div>` : '') +
     (sinReg.length ? `<div style="background:#FEF3C7;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px"><b>📭 Sin registros esta semana:</b> ${sinReg.map(e => escI(e.nombre) + (e.entrenador && e.entrenador !== '—' ? ' (' + escI(e.entrenador) + ')' : '')).join(', ')}</div>` : '') +
     filas.map(f => `<div style="margin-top:10px"><div style="font-weight:800;color:#1C2B4A;font-size:13px">⚽ ${escI(f.e.nombre)} <span style="font-weight:600;font-size:11px;color:#6B7280">· ${f.ses} sesiones · fiabilidad ${f.fb[0].toLowerCase()}</span></div>${htmlBalance(f.c)}</div>`).join('');
   toast('✅ Comparativa de equipos generada');
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONSTANCIA DEL REGISTRO · visible para el entrenador (solo si su equipo ha registrado)
+// ══════════════════════════════════════════════════════════════════════════════
+const DIAS_CORTOS = { 'lun': 1, 'mar': 2, 'mié': 3, 'mie': 3, 'jue': 4, 'vie': 5, 'sáb': 6, 'sab': 6, 'dom': 0 };
+const NOMBRES_DIA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function horarioEquipo() {
+  return String((equipoActual && equipoActual.horarios) || '').split('|').map(t => {
+    const p = t.split('·').map(x => x.trim()), d = DIAS_CORTOS[(p[0] || '').toLowerCase().slice(0, 3)];
+    const fin = ((p[p.length - 1] || '').match(/(\d{1,2}):(\d{2})\s*$/) || []).slice(1).map(Number);
+    return d === undefined ? null : { dia: d, fin: fin.length ? fin[0] * 60 + fin[1] : 19 * 60 };
+  }).filter(Boolean);
+}
+const isoLocal = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function sesionesPrevistas(lunes, hasta) {        // fechas de entrenamiento de una semana (de lunes a domingo) ya terminadas
+  const h = horarioEquipo(), out = [];
+  for (let k = 0; k < 7; k++) {
+    const d = new Date(lunes.getTime() + k * 864e5), s = h.find(x => x.dia === d.getDay());
+    if (!s) continue;
+    const finSesion = new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(s.fin / 60), s.fin % 60);
+    out.push({ f: isoLocal(d), d, terminada: finSesion <= hasta });
+  }
+  return out;
+}
+function actualizarConstancia() {
+  const box = document.getElementById('constancia'); if (!box || !equipoActual) return;
+  const h = horarioEquipo();
+  const registradas = new Set(rawEntreno().as.map(x => x.f).filter(Boolean));
+  ((window._datosEq || {})[equipoActual.id] || {}).Asistencia && window._datosEq[equipoActual.id].Asistencia.forEach(r => { if (r.Fecha) registradas.add(String(r.Fecha).slice(0, 10)); });
+  if (!h.length) { box.style.display = 'none'; return; }
+  const ahora = new Date(), hoy0 = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const lunes = new Date(hoy0.getTime() - ((hoy0.getDay() + 6) % 7) * 864e5);
+  const semana = sesionesPrevistas(lunes, ahora);
+  const hechas = semana.filter(x => x.terminada && registradas.has(x.f)).length, totales = semana.length;
+  const iconos = semana.map(x => registradas.has(x.f) ? '✅' : x.terminada ? '⬜' : '▫️').join('');
+  // Racha de semanas completas (todas las sesiones previstas registradas)
+  const primera = [...registradas].sort()[0];
+  let racha = 0;
+  for (let k = 1; k <= 12; k++) {
+    const l = new Date(lunes.getTime() - k * 7 * 864e5); if (!primera || isoLocal(new Date(l.getTime() + 6 * 864e5)) < primera) break;
+    const s = sesionesPrevistas(l, ahora); if (!s.length) break;
+    if (s.every(x => registradas.has(x.f))) racha++; else break;
+  }
+  // Último entrenamiento terminado sin registrar (esta semana o la anterior)
+  const previas = sesionesPrevistas(new Date(lunes.getTime() - 7 * 864e5), ahora).concat(semana).filter(x => x.terminada);
+  const conVal = new Set(rawEntreno().va.map(x => x.f).filter(Boolean));
+  ((window._datosEq || {})[equipoActual.id] || {}).Valoracion && window._datosEq[equipoActual.id].Valoracion.forEach(r => { if (r.Fecha && r.Atencion && r.Atencion !== '—') conVal.add(String(r.Fecha).slice(0, 10)); });
+  const pendiente = previas.slice().reverse().find(x => !registradas.has(x.f));
+  const sinValorar = !pendiente ? previas.slice().reverse().find(x => registradas.has(x.f) && !conVal.has(x.f)) : null;
+  const fCorta = x => NOMBRES_DIA[x.d.getDay()] + ' ' + x.f.slice(8, 10) + '/' + x.f.slice(5, 7);
+  box.innerHTML = `<div style="background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(15,74,36,.08);border-left:5px solid ${hechas === semana.filter(x => x.terminada).length ? '#059669' : '#F59E0B'}">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+        <div style="font-size:13px;font-weight:800;color:#1C2B4A">📅 Esta semana: ${hechas} de ${totales} sesiones registradas <span style="font-size:15px;letter-spacing:2px">${iconos}</span></div>
+        <div style="font-size:12px;font-weight:800;color:${racha ? '#065F46' : '#6B7280'}">${racha ? '🔥 Racha: ' + racha + ' semana' + (racha > 1 ? 's' : '') + ' completa' + (racha > 1 ? 's' : '') : 'Completa la semana para empezar tu racha'}</div>
+      </div>
+      ${pendiente ? `<div style="margin-top:8px;background:#FEF3C7;border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:700;color:#92400E">⚠️ Falta registrar el entrenamiento del ${fCorta(pendiente)}</span>
+          <button onclick="registrarPendiente('${pendiente.f}')" style="background:#B45309;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer">Registrar ahora</button></div>`
+        : sinValorar ? `<div style="margin-top:8px;background:#FEF3C7;border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:700;color:#92400E">⭐ Falta la valoración del entrenamiento del ${fCorta(sinValorar)}</span>
+          <button onclick="registrarPendiente('${sinValorar.f}', true)" style="background:#B45309;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer">Valorar ahora</button></div>`
+        : (semana.some(x => x.terminada) ? '<div style="margin-top:6px;font-size:11px;color:#065F46;font-weight:700">👏 ¡Todo al día! Gracias por registrar cada entrenamiento.</div>' : '')}
+      <div style="font-size:10px;color:#6B7280;margin-top:4px">Registrar todas las sesiones hace que las estadísticas de tu equipo sean fiables.</div>
+    </div>`;
+  box.style.display = 'block';
+}
+function registrarPendiente(f, valorar) {
+  if (modoActual === 'partido') toggleModo();
+  const btn = [...document.querySelectorAll('#tabs-e .tab-btn')].find(b => (valorar ? /Valoraci/ : /Asistencia/).test(b.textContent));
+  if (valorar) { setTab('valoracion', btn); document.querySelectorAll('#tabs-e .tab-btn').forEach(b => b.classList.toggle('active', b === btn)); const vf = document.getElementById('va-fecha'); if (vf) { vf.value = f; vf.dispatchEvent(new Event('change', { bubbles: true })); } toast('⭐ Fecha puesta: ' + f.split('-').reverse().join('/')); return; }
+  setTab('asistencia', btn);
+  document.querySelectorAll('#tabs-e .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  ['as-fecha', 'va-fecha'].forEach(id => { const el = document.getElementById(id); if (el) { el.value = f; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+  toast('📅 Fecha puesta: ' + f.split('-').reverse().join('/') + '. Rellena la asistencia y guarda.');
 }
 
 // ── Stats partido — acceso con contraseña ────────────────────────────────────
@@ -3389,6 +3619,7 @@ async function marcarIncidencia(id, estado) {
 function actualizarStatsAuto() {
   reconstruirEntreno();
   calcularStatsEntreno();
+  try { actualizarConstancia(); } catch(e) {}
   if (isNefta) setTimeout(() => { try { generarComparativaSemana(true); } catch(e) {} }, 300);
   try { pintarFaltas(); } catch(e) {}
   calcularStatsPartido();
@@ -3460,6 +3691,7 @@ async function cargarDesdeSheets(equipoId, silencioso) {
     if (!data || !data.ok) throw new Error((data && data.error) || 'Respuesta no válida');
     if (miCarga !== _cargaId) return 0;
     window._datosEq = window._datosEq || {}; window._datosEq[equipoId] = data;
+    setTimeout(() => { try { actualizarConstancia(); } catch(e) {} }, 0);
     const vistos = {};
     const nuevo = (reg) => {
       if (reg.Jugador) reg.Jugador = nombreEnPlantilla(reg.Jugador);
