@@ -2624,8 +2624,8 @@ function generarGraficosPartido(aviso) {
   const cont = document.getElementById('graficos-partido'); if (!cont) return;
   cont.style.display = 'block';
   const J = jugs(), RS = _registrosSemana;
-  const VERDE = '#065F46', NAR = '#C2410C', ROJO = '#991B1B', AZUL = '#1d4ed8', AMB = '#B45309', GRIS = '#9CA3AF';
-  const titulo = t => ({ display: true, text: t, font: { size: 13, weight: 'bold' }, color: '#1C2B4A' });
+  const VERDE = '#5E9E2F', NAR = '#F26B3A', ROJO = '#EF5B3A', AZUL = '#2A8C9C', AMB = '#F5A623', GRIS = '#5B6170';
+  const titulo = t => ({ display: true, text: t, font: { size: 13, weight: 'bold' }, color: '#4F5664' });
 
   // 1. Titulares / suplentes / sin registro
   let tit = 0, sup = 0, sin = 0;
@@ -2646,7 +2646,7 @@ function generarGraficosPartido(aviso) {
   const conAct = J.filter(j => puntos((RS.alineacion[j] || {}).actuacion) !== null);
   nuevoGrafico('gp-actuacion', { type: 'bar',
     data: { labels: conAct, datasets: [{ label: 'Actuación', data: conAct.map(j => puntos(RS.alineacion[j].actuacion)),
-      backgroundColor: conAct.map(j => { const v = puntos(RS.alineacion[j].actuacion); return v >= 4 ? VERDE : v >= 3 ? '#059669' : v >= 2 ? AMB : ROJO; }) }] },
+      backgroundColor: conAct.map(j => { const v = puntos(RS.alineacion[j].actuacion); return v >= 4 ? VERDE : v >= 3 ? '#8DC63F' : v >= 2 ? AMB : ROJO; }) }] },
     options: { indexAxis: 'y', plugins: { title: titulo('Actuación por jugador'), legend: { display: false } },
       scales: { x: { min: 0, max: 4, ticks: { stepSize: 1, callback: v => ['', 'Mejorable', 'Buena', 'Muy buena', 'Excelente'][v] || '' } } } } });
 
@@ -2667,7 +2667,7 @@ function generarGraficosPartido(aviso) {
     que += detallesJugador(j).filter(d => d.ficha === 'Quejas').length; });
   const fam = ((window._incidData || {}).ConductaFamilias || []).length;
   nuevoGrafico('gp-tipos', { type: 'doughnut',
-    data: { labels: ['Conflictos', 'Amarillas', 'Rojas', 'Quejas', 'Familias'], datasets: [{ data: [conf, am, ro, que, fam], backgroundColor: [NAR, '#EAB308', ROJO, AZUL, '#7C3AED'] }] },
+    data: { labels: ['Conflictos', 'Amarillas', 'Rojas', 'Quejas', 'Familias'], datasets: [{ data: [conf, am, ro, que, fam], backgroundColor: [NAR, '#F5A623', ROJO, AZUL, '#2A8C9C'] }] },
     options: { plugins: { title: titulo('Incidencias de partido por tipo'), legend: { position: 'bottom' } } } });
 
   // 5. Incidencias por jugador (solo quien tiene alguna)
@@ -2675,7 +2675,7 @@ function generarGraficosPartido(aviso) {
   nuevoGrafico('gp-jugadores', { type: 'bar',
     data: { labels: conInc.length ? conInc : ['Sin incidencias'], datasets: [
       { label: 'Conflictos', data: conInc.map(j => RS.conflictoP[j] || 0), backgroundColor: NAR },
-      { label: 'Tarjetas', data: conInc.map(j => (RS.tarjetas[j] || []).length), backgroundColor: '#EAB308' },
+      { label: 'Tarjetas', data: conInc.map(j => (RS.tarjetas[j] || []).length), backgroundColor: '#F5A623' },
       { label: 'Quejas', data: conInc.map(j => detallesJugador(j).filter(d => d.ficha === 'Quejas').length), backgroundColor: AZUL }] },
     options: { plugins: { title: titulo('Incidencias de partido por jugador'), legend: { position: 'bottom' } },
       scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } } } });
@@ -2950,8 +2950,10 @@ function calAAlineacion(j) {
 // COMPARATIVA SEMANA / ACUMULADO (equipo) y COMPARATIVA ENTRE EQUIPOS · solo Nefta
 // ══════════════════════════════════════════════════════════════════════════════
 const _chartsCmp = {};
+(function paletaGraficos(){ const ap = () => { if (typeof Chart === 'undefined') return setTimeout(ap, 400);
+  Chart.defaults.color = '#4F5664'; Chart.defaults.font.family = 'Arial, sans-serif'; Chart.defaults.borderColor = 'rgba(79,86,100,.12)'; }; ap(); })();
 function grafCmp(id, cfg) { const el = document.getElementById(id); if (!el || typeof Chart === 'undefined') return; if (_chartsCmp[id]) { try { _chartsCmp[id].destroy(); } catch(e) {} } _chartsCmp[id] = new Chart(el.getContext('2d'), cfg); }
-const tituloCmp = t => ({ display: true, text: t, font: { size: 12, weight: 'bold' }, color: '#1C2B4A' });
+const tituloCmp = t => ({ display: true, text: t, font: { size: 12, weight: 'bold' }, color: '#4F5664' });
 const isoHoy = () => new Date().toISOString().slice(0, 10);
 const isoMenos = (iso, n) => new Date(new Date(iso + 'T12:00:00').getTime() - n * 864e5).toISOString().slice(0, 10);
 const f1c = x => (x === null || x === undefined || isNaN(x)) ? '—' : (Math.round(x * 10) / 10).toString().replace('.', ',');
@@ -3120,7 +3122,7 @@ function entrenoVsPartido(data) {
         const l = d === null ? '—' : Math.abs(d) < 10 ? '🟢 Se mantiene igual en partido' : d < 0 ? '🔴 Baja en partido: trabajar la transferencia' : '🔵 Mejor en partido que en entreno';
         return `<tr><td style="text-align:left;padding-left:7px"><b>${n}</b></td><td>${f1p(e)}</td><td>${f1p(p)}</td><td>${d === null ? '—' : (d > 0 ? '+' : '') + Math.round(d)}</td><td style="text-align:left">${l}</td></tr>`; }).join('')}</tbody></table></div>`;
   grafCmp('cmp-ep-g', { type: 'bar', data: { labels: ['Rendimiento', 'Convivencia', 'Participación'], datasets: [
-    { label: 'Entrenamiento', data: [acc.rendE, acc.convE, acc.partE], backgroundColor: '#065F46' }, { label: 'Partido', data: [acc.rendP, acc.convP, acc.partP], backgroundColor: '#C2410C' }] },
+    { label: 'Entrenamiento', data: [acc.rendE, acc.convE, acc.partE], backgroundColor: '#5E9E2F' }, { label: 'Partido', data: [acc.rendP, acc.convP, acc.partP], backgroundColor: '#F26B3A' }] },
     options: { plugins: { title: tituloCmp('Entrenamiento frente a partido (0-100)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 100 } } } });
   // Por jugador: valoración en entreno frente a actuación en partido
   const accM = metricasDatos(data, '0000-00-00', '9999-12-31'), J = jugs();
@@ -3129,7 +3131,7 @@ function entrenoVsPartido(data) {
     const e = ajustar(medA(accM.jugadores[j].val), accM.jugadores[j].val.length, accM.valGlobal, K_JUG), pm = medA(actJ[j]);
     return { j, x: (e - 1) / 4 * 100, y: (ajustar(pm, actJ[j].length, accM.actuacion, 3) - 1) / 3 * 100, nE: accM.jugadores[j].val.length, nP: actJ[j].length };
   });
-  grafCmp('cmp-ep-jug', { type: 'scatter', data: { datasets: [{ label: 'Jugadores', data: P, backgroundColor: P.map(p => p.y - p.x < -15 ? '#DC2626' : p.y - p.x > 15 ? '#2563EB' : '#059669'), pointRadius: 7 }] },
+  grafCmp('cmp-ep-jug', { type: 'scatter', data: { datasets: [{ label: 'Jugadores', data: P, backgroundColor: P.map(p => p.y - p.x < -15 ? '#EF5B3A' : p.y - p.x > 15 ? '#3FB4C6' : '#8DC63F'), pointRadius: 7 }] },
     options: { plugins: { title: tituloCmp('Por jugador: entreno frente a partido (0-100, ajustado)'), legend: { display: false },
       tooltip: { callbacks: { label: c => `${c.raw.j}: entreno ${Math.round(c.raw.x)} · partido ${Math.round(c.raw.y)} (${c.raw.nE} entrenos, ${c.raw.nP} partidos)` } } },
       scales: { x: { min: 0, max: 100, title: { display: true, text: 'Entrenamiento' } }, y: { min: 0, max: 100, title: { display: true, text: 'Partido' } } } } });
@@ -3182,22 +3184,22 @@ function generarComparativaSemana(silencioso) {
     ${fila('Motivación (1-5)', m.motivacion, acc.motivacion, '')}${fila('Clima (1-5)', m.clima, acc.clima, '')}${fila('Actuación (1-4)', m.actuacion, acc.actuacion, '')}
     ${fila('Conflictos (acum.: media semanal)', m.conflictosE + m.conflictosP, (acc.conflictosE + acc.conflictosP) / nSem, '')}${fila('Tarjetas (acum.: media semanal)', m.amarillas + m.rojas, (acc.amarillas + acc.rojas) / nSem, '')}
     </tbody></table></div>${htmlBalance(clasificarCmp(m, prev, acc))}`;
-  const V = '#065F46', G = '#9CA3AF';
+  const V = '#5E9E2F', G = '#5B6170';
   grafCmp('cmp-grupo', { type: 'bar', data: { labels: ['Atención', 'Intensidad', 'Actitud', 'Motivación', 'Clima'], datasets: [
     { label: 'Esta semana', data: [m.ate, m.int, m.act, m.motivacion, m.clima], backgroundColor: V }, { label: 'Acumulado', data: [acc.ate, acc.int, acc.act, acc.motivacion, acc.clima], backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Valoración del grupo: semana y acumulado'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
-  grafCmp('cmp-asis', { type: 'bar', data: { labels: ['Asistencia'], datasets: [{ label: 'Esta semana', data: [m.pctAsis], backgroundColor: '#059669' }, { label: 'Acumulado', data: [acc.pctAsis], backgroundColor: G }] },
+  grafCmp('cmp-asis', { type: 'bar', data: { labels: ['Asistencia'], datasets: [{ label: 'Esta semana', data: [m.pctAsis], backgroundColor: '#8DC63F' }, { label: 'Acumulado', data: [acc.pctAsis], backgroundColor: G }] },
     options: { indexAxis: 'y', plugins: { title: tituloCmp('Asistencia (%): semana y acumulado'), legend: { position: 'bottom' } }, scales: { x: { min: 0, max: 100 } } } });
-  const pie = (id, t, x) => grafCmp(id, { type: 'pie', data: { labels: ['Presentes', 'Falta justificada', 'Falta no justificada'], datasets: [{ data: [x.presentes, x.fj, x.fnj], backgroundColor: ['#059669', '#F59E0B', '#DC2626'] }] }, options: { plugins: { title: tituloCmp(t), legend: { position: 'bottom' } } } });
+  const pie = (id, t, x) => grafCmp(id, { type: 'pie', data: { labels: ['Presentes', 'Falta justificada', 'Falta no justificada'], datasets: [{ data: [x.presentes, x.fj, x.fnj], backgroundColor: ['#8DC63F', '#F5A623', '#EF5B3A'] }] }, options: { plugins: { title: tituloCmp(t), legend: { position: 'bottom' } } } });
   pie('cmp-pie-sem', 'Asistencia de la semana', m); pie('cmp-pie-acc', 'Asistencia acumulada', acc);
   grafCmp('cmp-evol-val', { type: 'line', data: { labels: sem.map(s => s.et), datasets: [
-    { label: 'Atención', data: sem.map(s => s.m.ate), borderColor: '#2563EB', backgroundColor: '#2563EB', tension: .3 },
-    { label: 'Intensidad', data: sem.map(s => s.m.int), borderColor: '#F59E0B', backgroundColor: '#F59E0B', tension: .3 },
-    { label: 'Actitud', data: sem.map(s => s.m.act), borderColor: '#059669', backgroundColor: '#059669', tension: .3 }] },
+    { label: 'Atención', data: sem.map(s => s.m.ate), borderColor: '#3FB4C6', backgroundColor: '#3FB4C6', tension: .3 },
+    { label: 'Intensidad', data: sem.map(s => s.m.int), borderColor: '#F5A623', backgroundColor: '#F5A623', tension: .3 },
+    { label: 'Actitud', data: sem.map(s => s.m.act), borderColor: '#8DC63F', backgroundColor: '#8DC63F', tension: .3 }] },
     options: { plugins: { title: tituloCmp('Evolución semana a semana (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
   grafCmp('cmp-evol-asis', { type: 'bar', data: { labels: sem.map(s => s.et), datasets: [
     { type: 'line', label: 'Asistencia %', data: sem.map(s => s.m.pctAsis), borderColor: V, backgroundColor: V, yAxisID: 'y', tension: .3 },
-    { label: 'Sesiones registradas', data: sem.map(s => new Set((data.Asistencia || []).filter(r => { const f = String(r.Fecha || '').slice(0, 10); return f >= isoMenos(s.fin || R.hasta, 6) && f <= (s.fin || R.hasta); }).map(r => String(r.Fecha).slice(0, 10))).size), backgroundColor: 'rgba(37,99,235,.35)', yAxisID: 'y2' }] },
+    { label: 'Sesiones registradas', data: sem.map(s => new Set((data.Asistencia || []).filter(r => { const f = String(r.Fecha || '').slice(0, 10); return f >= isoMenos(s.fin || R.hasta, 6) && f <= (s.fin || R.hasta); }).map(r => String(r.Fecha).slice(0, 10))).size), backgroundColor: 'rgba(63,180,198,.35)', yAxisID: 'y2' }] },
     options: { plugins: { title: tituloCmp('Asistencia y constancia del registro por semana'), legend: { position: 'bottom' } },
       scales: { y: { min: 0, max: 100, position: 'left', title: { display: true, text: '%' } }, y2: { min: 0, suggestedMax: 4, position: 'right', grid: { drawOnChartArea: false }, ticks: { stepSize: 1 }, title: { display: true, text: 'Sesiones' } } } } });
   // ── Por jugador, con ajuste por número de registros ──
@@ -3210,20 +3212,20 @@ function generarComparativaSemana(silencioso) {
     return { j, n, bruto, adj, ns, sb, sadj, nAs: a.tot, asB, asAdj };
   });
   grafCmp('cmp-jug', { type: 'bar', data: { labels: P.map(x => `${x.j} (${x.n})`), datasets: [
-    { label: 'Esta semana (ajustada)', data: P.map(x => x.sadj), backgroundColor: '#7C3AED' },
+    { label: 'Esta semana (ajustada)', data: P.map(x => x.sadj), backgroundColor: '#2A8C9C' },
     { label: 'Acumulado (ajustada)', data: P.map(x => x.adj), backgroundColor: G }] },
     options: { indexAxis: 'y', plugins: { title: tituloCmp('Valoración por jugador ajustada por nº de registros · (n) = registros'), legend: { position: 'bottom' } }, scales: { x: { min: 0, max: 5 } } } });
   grafCmp('cmp-disp', { type: 'bubble', data: { datasets: [{ label: 'Jugadores', data: P.filter(x => x.asAdj !== null && x.adj !== null).map(x => ({ x: x.asAdj, y: x.adj, r: 4 + Math.min(10, x.n), j: x.j, n: x.n })),
-    backgroundColor: 'rgba(37,99,235,.55)', borderColor: '#1d4ed8' }] },
+    backgroundColor: 'rgba(63,180,198,.55)', borderColor: '#2A8C9C' }] },
     options: { plugins: { title: tituloCmp('Asistencia frente a valoración (ajustadas) · tamaño = nº de registros'), legend: { display: false },
       tooltip: { callbacks: { label: c => `${c.raw.j}: ${Math.round(c.raw.x)} % · ${f1c(c.raw.y)} · ${c.raw.n} registros` } } },
       scales: { x: { min: 0, max: 100, title: { display: true, text: 'Asistencia ajustada (%)' } }, y: { min: 0, max: 5, title: { display: true, text: 'Valoración ajustada' } } } } });
   grafCmp('cmp-inc', { type: 'bar', data: { labels: ['Conflictos entreno', 'Conflictos partido', 'Amarillas', 'Rojas', 'Quejas'], datasets: [
-    { label: 'Esta semana', data: [m.conflictosE, m.conflictosP, m.amarillas, m.rojas, m.quejas], backgroundColor: '#EA580C' },
+    { label: 'Esta semana', data: [m.conflictosE, m.conflictosP, m.amarillas, m.rojas, m.quejas], backgroundColor: '#F26B3A' },
     { label: 'Media semanal', data: [acc.conflictosE, acc.conflictosP, acc.amarillas, acc.rojas, acc.quejas].map(v => v / nSem), backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Incidencias: semana y media semanal'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } });
   grafCmp('cmp-reg', { type: 'bar', data: { labels: P.map(x => x.j), datasets: [
-    { label: 'Valoraciones registradas', data: P.map(x => x.n), backgroundColor: '#F59E0B' }, { label: 'Asistencias registradas', data: P.map(x => x.nAs), backgroundColor: '#059669' }] },
+    { label: 'Valoraciones registradas', data: P.map(x => x.n), backgroundColor: '#F5A623' }, { label: 'Asistencias registradas', data: P.map(x => x.nAs), backgroundColor: '#8DC63F' }] },
     options: { plugins: { title: tituloCmp('Número de registros por jugador'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
   const hist = (src) => [1, 2, 3, 4, 5].map(v => Object.values(src.jugadores).reduce((s, x) => s + x.val.filter(y => Math.round(y) === v).length, 0));
   grafCmp('cmp-hist', { type: 'bar', data: { labels: ['1', '2', '3', '4', '5'], datasets: [{ label: 'Esta semana', data: hist(m), backgroundColor: V }, { label: 'Acumulado', data: hist(acc), backgroundColor: G }] },
@@ -3231,7 +3233,7 @@ function generarComparativaSemana(silencioso) {
   const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], pd = [0, 0, 0, 0, 0, 0, 0], td = [0, 0, 0, 0, 0, 0, 0];
   (data.Asistencia || []).forEach(r => { if (!r.Fecha || !r.Asistencia) return; const d = (new Date(String(r.Fecha).slice(0, 10) + 'T12:00:00').getDay() + 6) % 7; td[d]++; if (r.Asistencia === 'Presente') pd[d]++; });
   const idx = dias.map((_, k) => k).filter(k => td[k]);
-  grafCmp('cmp-dia', { type: 'bar', data: { labels: idx.map(k => dias[k]), datasets: [{ label: 'Asistencia %', data: idx.map(k => Math.round(pd[k] / td[k] * 100)), backgroundColor: '#0891B2' }] },
+  grafCmp('cmp-dia', { type: 'bar', data: { labels: idx.map(k => dias[k]), datasets: [{ label: 'Asistencia %', data: idx.map(k => Math.round(pd[k] / td[k] * 100)), backgroundColor: '#3FB4C6' }] },
     options: { plugins: { title: tituloCmp('Asistencia por día de la semana (%)'), legend: { display: false } }, scales: { y: { min: 0, max: 100 } } } });
   try { document.getElementById('cmp-calidad').innerHTML = htmlCalidad(calidadRegistro(data, equipoActual), 'Fiabilidad del registro de ' + escI(equipoActual.nombre)); } catch(e) {}
   try { entrenoVsPartido(data); } catch(e) { console.log(e); }
@@ -3272,8 +3274,8 @@ async function comparativaConClub(acc) {
     <div style="display:flex;gap:6px;flex-wrap:wrap">${[['Asistencia', 'pctAsis', ' %'], ['Valoración', 'valGlobal', ''], ['Atención', 'ate', ''], ['Intensidad', 'int', ''], ['Actitud', 'act', '']].map(v =>
       `<div style="flex:1;min-width:95px;background:#F9FAFB;border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:700;color:#374151">${v[0].toUpperCase()}</div><div style="font-size:15px;font-weight:900">${f1c(adj(yo, v[1]))}${v[2]}</div><div style="font-size:10px;color:#6B7280">club ${f1c(club(v[1]))}${v[2]} · ${rank(v[1])}.º</div></div>`).join('')}</div>`;
   grafCmp('cmp-club-g', { type: 'bar', data: { labels: ['Atención', 'Intensidad', 'Actitud', 'Valoración'], datasets: [
-    { label: equipoActual.nombre + ' (ajustado)', data: [adj(yo, 'ate'), adj(yo, 'int'), adj(yo, 'act'), adj(yo, 'valGlobal')], backgroundColor: '#065F46' },
-    { label: 'Media del club', data: [club('ate'), club('int'), club('act'), club('valGlobal')], backgroundColor: '#9CA3AF' }] },
+    { label: equipoActual.nombre + ' (ajustado)', data: [adj(yo, 'ate'), adj(yo, 'int'), adj(yo, 'act'), adj(yo, 'valGlobal')], backgroundColor: '#5E9E2F' },
+    { label: 'Media del club', data: [club('ate'), club('int'), club('act'), club('valGlobal')], backgroundColor: '#5B6170' }] },
     options: { plugins: { title: tituloCmp('Equipo frente a la media del club (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
 }
 
@@ -3312,24 +3314,24 @@ async function generarComparativaEquipos() {
       <td>${f.m.pctAsis === null ? '—' : Math.round(f.m.pctAsis) + ' %'}</td><td>${f.adjAs === null ? '—' : Math.round(f.adjAs) + ' %'}</td><td>${f1c(f.m.valGlobal)}</td><td><b>${f1c(f.adjVal)}</b></td>
       <td style="color:#065F46;font-weight:800">${f.c.mejorado.length}</td><td style="color:#1E40AF;font-weight:800">${f.c.mantenido.length}</td><td style="color:#991B1B;font-weight:800">${f.c.aMejorar.length}</td></tr>`).join('') + `</tbody></table></div>
     <div style="font-size:11px;color:#6B7280;margin-top:4px">Semana: ${desde.split('-').reverse().join('/')} – ${hasta.split('-').reverse().join('/')} · Índice de fiabilidad = 50 % cobertura del horario + 25 % completitud + 15 % puntualidad + 10 % notas diferenciadas (alta ≥ 75, media 50-74, baja &lt; 50).</div>`;
-  const L = filas.map(f => f.e.nombre), G = '#9CA3AF';
-  grafCmp('cmpe-asis', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.pctAsis), backgroundColor: '#059669' }, { label: 'Acumulado (ajustado)', data: filas.map(f => f.adjAs), backgroundColor: G }] },
+  const L = filas.map(f => f.e.nombre), G = '#5B6170';
+  grafCmp('cmpe-asis', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.pctAsis), backgroundColor: '#8DC63F' }, { label: 'Acumulado (ajustado)', data: filas.map(f => f.adjAs), backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Asistencia (%) por equipo'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 100 } } } });
-  grafCmp('cmpe-val', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.valGlobal), backgroundColor: '#7C3AED' }, { label: 'Acumulado (ajustado)', data: filas.map(f => f.adjVal), backgroundColor: G }] },
+  grafCmp('cmpe-val', { type: 'bar', data: { labels: L, datasets: [{ label: 'Esta semana', data: filas.map(f => f.m.valGlobal), backgroundColor: '#2A8C9C' }, { label: 'Acumulado (ajustado)', data: filas.map(f => f.adjVal), backgroundColor: G }] },
     options: { plugins: { title: tituloCmp('Valoración media por equipo (1-5)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
   grafCmp('cmpe-dims', { type: 'bar', data: { labels: L, datasets: [
-    { label: 'Atención', data: filas.map(f => ajustar(f.acc.ate, f.ses, club('ate'), K_EQ)), backgroundColor: '#2563EB' },
-    { label: 'Intensidad', data: filas.map(f => ajustar(f.acc.int, f.ses, club('int'), K_EQ)), backgroundColor: '#F59E0B' },
-    { label: 'Actitud', data: filas.map(f => ajustar(f.acc.act, f.ses, club('act'), K_EQ)), backgroundColor: '#059669' }] },
+    { label: 'Atención', data: filas.map(f => ajustar(f.acc.ate, f.ses, club('ate'), K_EQ)), backgroundColor: '#3FB4C6' },
+    { label: 'Intensidad', data: filas.map(f => ajustar(f.acc.int, f.ses, club('int'), K_EQ)), backgroundColor: '#F5A623' },
+    { label: 'Actitud', data: filas.map(f => ajustar(f.acc.act, f.ses, club('act'), K_EQ)), backgroundColor: '#8DC63F' }] },
     options: { plugins: { title: tituloCmp('Atención, intensidad y actitud (ajustadas)'), legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 5 } } } });
   grafCmp('cmpe-inc', { type: 'bar', data: { labels: L, datasets: [
-    { label: 'Conflictos / sesión', data: filas.map(f => (f.acc.conflictosE + f.acc.conflictosP) / Math.max(1, f.ses)), backgroundColor: '#EA580C' },
-    { label: 'Tarjetas / sesión', data: filas.map(f => (f.acc.amarillas + f.acc.rojas) / Math.max(1, f.ses)), backgroundColor: '#EAB308' },
-    { label: 'Quejas / sesión', data: filas.map(f => f.acc.quejas / Math.max(1, f.ses)), backgroundColor: '#2563EB' }] },
+    { label: 'Conflictos / sesión', data: filas.map(f => (f.acc.conflictosE + f.acc.conflictosP) / Math.max(1, f.ses)), backgroundColor: '#F26B3A' },
+    { label: 'Tarjetas / sesión', data: filas.map(f => (f.acc.amarillas + f.acc.rojas) / Math.max(1, f.ses)), backgroundColor: '#F5A623' },
+    { label: 'Quejas / sesión', data: filas.map(f => f.acc.quejas / Math.max(1, f.ses)), backgroundColor: '#3FB4C6' }] },
     options: { plugins: { title: tituloCmp('Incidencias por sesión registrada'), legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
-  grafCmp('cmpe-reg', { type: 'bar', data: { labels: L, datasets: [{ label: 'Sesiones registradas', data: filas.map(f => f.ses), backgroundColor: '#1C2B4A' }, { label: 'Esta semana', data: filas.map(f => f.sesSem), backgroundColor: '#60A5FA' }] },
+  grafCmp('cmpe-reg', { type: 'bar', data: { labels: L, datasets: [{ label: 'Sesiones registradas', data: filas.map(f => f.ses), backgroundColor: '#4F5664' }, { label: 'Esta semana', data: filas.map(f => f.sesSem), backgroundColor: '#60A5FA' }] },
     options: { plugins: { title: tituloCmp('Constancia del registro por equipo'), legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
-  grafCmp('cmpe-bal', { type: 'bar', data: { labels: L, datasets: [{ label: 'Ha mejorado', data: filas.map(f => f.c.mejorado.length), backgroundColor: '#059669' }, { label: 'Se ha mantenido', data: filas.map(f => f.c.mantenido.length), backgroundColor: '#2563EB' }, { label: 'Debe mejorar', data: filas.map(f => f.c.aMejorar.length), backgroundColor: '#DC2626' }] },
+  grafCmp('cmpe-bal', { type: 'bar', data: { labels: L, datasets: [{ label: 'Ha mejorado', data: filas.map(f => f.c.mejorado.length), backgroundColor: '#8DC63F' }, { label: 'Se ha mantenido', data: filas.map(f => f.c.mantenido.length), backgroundColor: '#3FB4C6' }, { label: 'Debe mejorar', data: filas.map(f => f.c.aMejorar.length), backgroundColor: '#EF5B3A' }] },
     options: { indexAxis: 'y', plugins: { title: tituloCmp('Balance de cada equipo'), legend: { position: 'bottom' } }, scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } } } });
   document.getElementById('cmp-eq-detalle').innerHTML =
     (insuf.length ? `<div style="background:#FEF2F2;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px"><b>⚠️ Datos insuficientes para comparar:</b> ${insuf.map(f => escI(f.e.nombre) + ' (registra ' + f.q.sesiones + ' de ' + (f.q.previstas || '?') + ' sesiones, completitud ' + Math.round(f.q.completitud * 100) + ' %)').join(' · ')}. Sus datos se muestran, pero no entran en el ranking ni en la media del club.</div>` : '') +
@@ -3962,13 +3964,13 @@ function generarGraficosStats() {
   window._chAsis = new Chart(document.getElementById('chart-asistencia').getContext('2d'),{
     type:'bar',
     data:{labels:J,datasets:[
-      {label:'Presente',  data:pres, backgroundColor:'#065F46',borderRadius:4,indexAxis:'y'},
-      {label:'Falta J.',  data:fj,   backgroundColor:'#B45309',borderRadius:4,indexAxis:'y'},
-      {label:'Falta NJ',  data:fnj,  backgroundColor:'#991B1B',borderRadius:4,indexAxis:'y'},
+      {label:'Presente',  data:pres, backgroundColor:'#5E9E2F',borderRadius:4,indexAxis:'y'},
+      {label:'Falta J.',  data:fj,   backgroundColor:'#F5A623',borderRadius:4,indexAxis:'y'},
+      {label:'Falta NJ',  data:fnj,  backgroundColor:'#EF5B3A',borderRadius:4,indexAxis:'y'},
     ]},
     options:{...cfg,indexAxis:'y',
       plugins:{legend:{position:'bottom',labels:{font:{size:10}}},
-               title:{display:true,text:'Asistencia por jugador',font:{size:12,weight:'bold'},color:'#1C2B4A'}},
+               title:{display:true,text:'Asistencia por jugador',font:{size:12,weight:'bold'},color:'#4F5664'}},
       scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}}},
               y:{ticks:{font:{size:9}}}}}
   });
@@ -3978,24 +3980,24 @@ function generarGraficosStats() {
     type:'doughnut',
     data:{labels:['Presentes ('+totP+')','Falta just. ('+totFJ+')','Falta NJ ('+totFNJ+')'],
           datasets:[{data:[totP,totFJ,totFNJ],
-            backgroundColor:['#065F46','#B45309','#991B1B'],
+            backgroundColor:['#5E9E2F','#F5A623','#EF5B3A'],
             borderColor:'#fff',borderWidth:3}]},
     options:{...cfg,
       plugins:{legend:{position:'bottom',labels:{font:{size:11}}},
-               title:{display:true,text:'Distribución de asistencia',font:{size:12,weight:'bold'},color:'#1C2B4A'}}}
+               title:{display:true,text:'Distribución de asistencia',font:{size:12,weight:'bold'},color:'#4F5664'}}}
   });
 
   // ── 3. Barras agrupadas valoración con valores encima ────────────────────
   window._chVal = new Chart(document.getElementById('chart-valoracion').getContext('2d'),{
     type:'bar',
     data:{labels:J,datasets:[
-      {label:'Atención',  data:ate,  backgroundColor:'#2563EB',borderRadius:3},
+      {label:'Atención',  data:ate,  backgroundColor:'#3FB4C6',borderRadius:3},
       {label:'Intensidad',data:int_, backgroundColor:'#D97706',borderRadius:3},
-      {label:'Actitud',   data:act,  backgroundColor:'#065F46',borderRadius:3},
+      {label:'Actitud',   data:act,  backgroundColor:'#5E9E2F',borderRadius:3},
     ]},
     options:{...cfg,
       plugins:{legend:{position:'top',labels:{font:{size:10}}},
-               title:{display:true,text:'Valoración deportiva semanal',font:{size:12,weight:'bold'},color:'#1C2B4A'},
+               title:{display:true,text:'Valoración deportiva semanal',font:{size:12,weight:'bold'},color:'#4F5664'},
                datalabels:{display:false}},
       scales:{x:{ticks:{font:{size:9},maxRotation:30}},
               y:{beginAtZero:true,min:0,max:5,ticks:{stepSize:1,font:{size:9}}}}}
@@ -4010,12 +4012,12 @@ function generarGraficosStats() {
     data:{labels:rankData.map(o=>o.j),datasets:[{
       label:'Media',
       data:rankData.map(o=>o.m),
-      backgroundColor:rankData.map(o=>o.m>=4?'#065F46':o.m>=2.5?'#B45309':'#991B1B'),
+      backgroundColor:rankData.map(o=>o.m>=4?'#5E9E2F':o.m>=2.5?'#F5A623':'#EF5B3A'),
       borderRadius:4
     }]},
     options:{...cfg,indexAxis:'y',
       plugins:{legend:{display:false},
-               title:{display:true,text:'Ranking por media de valoración',font:{size:12,weight:'bold'},color:'#1C2B4A'}},
+               title:{display:true,text:'Ranking por media de valoración',font:{size:12,weight:'bold'},color:'#4F5664'}},
       scales:{x:{beginAtZero:true,min:0,max:5,ticks:{stepSize:1,font:{size:9}}},
               y:{ticks:{font:{size:9}}}}}
   });
@@ -4027,17 +4029,17 @@ function generarGraficosStats() {
     data:{labels:['Atención','Intensidad','Actitud'],datasets:[
       {label:'Grupo ('+((mAte+mInt+mAct)/3).toFixed(1)+'/5)',
        data:nV?[+mAte.toFixed(1),+mInt.toFixed(1),+mAct.toFixed(1)]:[0,0,0],
-       backgroundColor:'rgba(37,99,235,0.15)',borderColor:'#2563EB',borderWidth:2.5,
-       pointBackgroundColor:'#fff',pointBorderColor:'#2563EB',pointBorderWidth:2.5},
+       backgroundColor:'rgba(37,99,235,0.15)',borderColor:'#3FB4C6',borderWidth:2.5,
+       pointBackgroundColor:'#fff',pointBorderColor:'#3FB4C6',pointBorderWidth:2.5},
       {label:'Ref. 4.0',data:[4,4,4],
-       backgroundColor:'rgba(156,163,175,0.05)',borderColor:'#9CA3AF',
+       backgroundColor:'rgba(156,163,175,0.05)',borderColor:'#5B6170',
        borderWidth:1.5,borderDash:[6,4],pointRadius:0}
     ]},
     options:{...cfg,
       scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:9}},
                  pointLabels:{font:{size:11,weight:'bold'}}}},
       plugins:{legend:{position:'bottom',labels:{font:{size:10}}},
-               title:{display:true,text:'Perfil grupal del equipo',font:{size:12,weight:'bold'},color:'#1C2B4A'}}}
+               title:{display:true,text:'Perfil grupal del equipo',font:{size:12,weight:'bold'},color:'#4F5664'}}}
   });
 
   window._statsParaPDF = {J,pres,fj,fnj,ate,int_,act,medias};
