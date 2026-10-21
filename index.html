@@ -1130,7 +1130,7 @@ const EQUIPOS = {
   },
   benjaminB:  {
     nombre:'Benjamín B', detalle:'1ª Regional Mallorca', id:'BenjaminB',
-    entrenador:'Miguel A.', password:'6a9d34785709fe017c29e5412decad456f6a24ba06504e826610ce9dc2c9871a', jugadores:['Dibu','Simeon','Abraham','Len','Leon','Matvei','Matias','Sebastián','Enzo','Nahuel'],
+    entrenador:'Miguel A.', password:'6a9d34785709fe017c29e5412decad456f6a24ba06504e826610ce9dc2c9871a', jugadores:['Miquel (1)','Sebastián (5)','Len (6)','Abraham (7)','Simeón (8)','León (9)','Enzo (10)','Matías (11)','Thiago (14)','Nahuel (20)'],
     horarios:'Lun · Campo B · 17:30–19:00 | Mié · Campo A · 17:30–19:00 | Jue · Campo A · 17:30–19:00'
   },
   benjaminC:  {
@@ -2008,6 +2008,18 @@ function generarConv() {
 
   preview.style.display = 'block';
   preview.scrollIntoView({behavior:'smooth'});
+  guardarConvocatoriaServidor({ fecha: fechaIso, hora: v('cv-hora'), conc: v('cv-conc'), rival: v('cv-rival'), campo: campo, convocados: nConv, mensaje: msg });
+}
+
+// La convocatoria (sin nombres de jugadores) se guarda para incluirla en el informe de los viernes a las familias
+async function guardarConvocatoriaServidor(c) {
+  if (!c.fecha || !c.rival || !equipoActual) return;
+  try {
+    const res = await fetch(GAS, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ ficha: 'CONVOCATORIA', equipoId: equipoActual.id }, c)) });
+    const d = await res.json();
+    if (d && d.ok) toast('📣 Convocatoria guardada: irá en el informe del viernes para las familias');
+  } catch(e) { console.log('Convocatoria:', e.message); }
 }
 
 
