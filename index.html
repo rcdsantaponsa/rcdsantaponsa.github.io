@@ -262,7 +262,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <span class="eq-icon"><span class="escudo-mini"></span></span>
         <div class="eq-info">
           <div class="eq-name">Alevín A <span style="font-size:10px;background:var(--verde-p);color:var(--verde);padding:1px 6px;border-radius:10px;font-weight:700;margin-left:4px">✓ Configurado</span></div>
-          <div class="eq-detail">Entrenador: Diego · 9 jugadores · Mar/Mié/Jue · Campo G</div>
+          <div class="eq-detail">Entrenador: Diego · 10 jugadores · Mar/Mié/Jue · Campo G</div>
         </div><span class="eq-arrow">›</span>
       </button>
       <button class="eq-btn" onclick="abrirEquipo('alevinB')" style="border-left:3px solid var(--verde)">
@@ -1119,7 +1119,7 @@ const EQUIPOS = {
   },
   alevinA:    {
     nombre:'Alevín A', detalle:'1ª Regional Mallorca', id:'AlevinA',
-    entrenador:'Diego', password:'e40bbf93c8e806918880f0918eab2173b8ae539f8d50bf7f2ca4d33f9cd42caa', jugadores:['Amarjot','Etham','Nicos','Ismael','Filippo','Amir','Marc','Dylan','Gurkirat'],
+    entrenador:'Diego', password:'e40bbf93c8e806918880f0918eab2173b8ae539f8d50bf7f2ca4d33f9cd42caa', jugadores:['Matias','Amarjot','Etham','Nicos','Ismael','Filippo','Amir','Marc','Dylan','Gurkirat'],
     horarios:'Mar · Campo G · 17:30–19:00 | Mié · Campo G · 17:30–19:00 | Jue · Campo G · 17:30–19:00'
   },
   alevinB:    {
@@ -2493,7 +2493,7 @@ const BORRADOR_TODOS = ['as-','va-','ce-','ss-','al-','cp-','qu-','ta-','pa-','s
 const BORRADOR_DIAS = 7;
 let _borradorTimer = null, _restaurando = false, _tocados = new Set();   // solo lo que el entrenador ha tocado
 
-function claveBorrador() { return equipoActual ? 'rcd_borrador_' + equipoActual.id : null; }
+function claveBorrador() { return equipoActual ? 'rcd_borrador_' + equipoActual.id + '_' + (equipoActual.jugadores || []).length + '_' + String((equipoActual.jugadores || [])[0] || '').slice(0, 6) : null; }   // si cambia la plantilla, el borrador antiguo no se aplica a otro jugador
 function campoBorrador(el) {
   if (!el || el.type === 'password' || el.type === 'file' || el.type === 'button') return null;
   const nom = el.type === 'radio' || el.type === 'checkbox' ? (el.name || el.id) : el.id;
