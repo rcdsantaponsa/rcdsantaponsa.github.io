@@ -466,9 +466,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div style="font-size:11px;line-height:1.45;margin-bottom:2px"><b style="display:inline-block;min-width:18px;color:#065F46">4</b> Positiva: respeta, anima y acepta las correcciones.</div>
         <div style="font-size:11px;line-height:1.45;margin-bottom:2px"><b style="display:inline-block;min-width:18px;color:#065F46">5</b> Ejemplar: anima, ayuda a sus compañeros y es un referente.</div>
         </div>
+        <div style="border-left:4px solid #DB2777;background:#FCE7F3;border-radius:6px;padding:7px 10px;margin-bottom:6px">
+        <div style="font-weight:800;font-size:12px;color:#DB2777;margin-bottom:4px">💪 Motivación</div>
+        <div style="font-size:11px;line-height:1.45;margin-bottom:2px"><b style="display:inline-block;min-width:18px;color:#DB2777">1</b> Hay que insistirle para que participe; se queda al margen o pide parar.</div>
+        <div style="font-size:11px;line-height:1.45;margin-bottom:2px"><b style="display:inline-block;min-width:18px;color:#DB2777">2</b> Participa solo cuando se le pide; se desanima pronto ante el error.</div>
+        <div style="font-size:11px;line-height:1.45;margin-bottom:2px"><b style="display:inline-block;min-width:18px;color:#DB2777">3</b> Participa con normalidad, sin destacar.</div>
+        <div style="font-size:11px;line-height:1.45;margin-bottom:2px"><b style="display:inline-block;min-width:18px;color:#DB2777">4</b> Se ofrece a participar, pregunta y vuelve a intentarlo tras fallar.</div>
+        <div style="font-size:11px;line-height:1.45;margin-bottom:2px"><b style="display:inline-block;min-width:18px;color:#DB2777">5</b> Llega con ganas, pide más ejercicios, busca mejorar y contagia al grupo.</div>
+      </div>
         </div></details>
         <div style="overflow-x:auto"><table class="jt">
-          <thead><tr><th style="text-align:left;padding-left:7px;min-width:80px">Jugador</th><th title="1: Hay que repetirle las instrucciones casi siempre; se distrae con facilidad. · 2: Se despista a menudo; necesita recordatorios frecuentes. · 3: Sigue las instrucciones, con algún despiste. · 4: Escucha y ejecuta bien casi siempre. · 5: Lo hace a la primera, está pendiente y ayuda a sus compañeros a entenderlo.">👁️ Atención</th><th title="1: Participa sin esfuerzo: camina o se para en los ejercicios. · 2: Se esfuerza poco y solo a ratos. · 3: Esfuerzo normal, con altibajos. · 4: Se esfuerza en casi todos los ejercicios. · 5: Máximo esfuerzo de principio a fin: presiona y vuelve siempre.">⚡ Intensidad</th><th title="1: Protesta, no respeta las normas o molesta a sus compañeros. · 2: Actitud negativa en varios momentos de la sesión. · 3: Correcta, sin destacar. · 4: Positiva: respeta, anima y acepta las correcciones. · 5: Ejemplar: anima, ayuda a sus compañeros y es un referente.">🤝 Actitud</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding-left:7px;min-width:80px">Jugador</th><th title="1: Hay que repetirle las instrucciones casi siempre; se distrae con facilidad. · 2: Se despista a menudo; necesita recordatorios frecuentes. · 3: Sigue las instrucciones, con algún despiste. · 4: Escucha y ejecuta bien casi siempre. · 5: Lo hace a la primera, está pendiente y ayuda a sus compañeros a entenderlo.">👁️ Atención</th><th title="1: Participa sin esfuerzo: camina o se para en los ejercicios. · 2: Se esfuerza poco y solo a ratos. · 3: Esfuerzo normal, con altibajos. · 4: Se esfuerza en casi todos los ejercicios. · 5: Máximo esfuerzo de principio a fin: presiona y vuelve siempre.">⚡ Intensidad</th><th title="1: Protesta, no respeta las normas o molesta a sus compañeros. · 2: Actitud negativa en varios momentos de la sesión. · 3: Correcta, sin destacar. · 4: Positiva: respeta, anima y acepta las correcciones. · 5: Ejemplar: anima, ayuda a sus compañeros y es un referente.">🤝 Actitud</th><th title="1: Hay que insistirle para que participe · 2: Participa solo cuando se le pide · 3: Participa con normalidad · 4: Se ofrece y lo vuelve a intentar · 5: Llega con ganas y contagia al grupo">💪 Motivación</th></tr></thead>
           <tbody id="tb-valoracion"></tbody>
         </table></div>
         <div class="field" style="margin-top:10px"><label>Nota del entrenador</label><textarea id="va-nota" placeholder="Aspectos destacados del grupo hoy..."></textarea></div>
@@ -563,7 +571,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
         <div class="sep">Resumen por jugador</div>
         <div style="overflow-x:auto"><table class="jt">
-          <thead><tr><th style="text-align:left;padding-left:7px">Jugador</th><th>Asist.</th><th>Fal.J</th><th>Fal.NJ</th><th>Ate.</th><th>Int.</th><th>Act.</th><th>Media</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding-left:7px">Jugador</th><th>Asist.</th><th>Fal.J</th><th>Fal.NJ</th><th>Ate.</th><th>Int.</th><th>Act.</th><th>Mot.</th><th>Media</th></tr></thead>
           <tbody id="tb-stats-semana"></tbody>
         </table></div>
         <div class="sep">Gráficos semanales</div>
@@ -1397,6 +1405,7 @@ function buildTablas() {
       <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center">${pills('va-ate')}</div></td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center">${pills('va-int')}</div></td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center">${pills('va-act')}</div></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center">${pills('va-mot')}</div></td>
       </tr>`;
   });
   document.getElementById('tb-valoracion').innerHTML = html;
@@ -1412,6 +1421,7 @@ function buildTablas() {
       <td id="ss-cell-ate-${i}" style="text-align:center;color:var(--text3)">—</td>
       <td id="ss-cell-int-${i}" style="text-align:center;color:var(--text3)">—</td>
       <td id="ss-cell-act-${i}" style="text-align:center;color:var(--text3)">—</td>
+      <td id="ss-cell-mot-${i}" style="text-align:center;color:var(--text3)">—</td>
       <td id="ss-cell-med-${i}" style="text-align:center;font-weight:700;color:var(--verde)">—</td>
     </tr>`;
   });
@@ -1721,10 +1731,10 @@ async function guardar(tipo) {
     }
     else if (tipo === 'valoracion') {
       const ficha = `${eq}_Valoracion`;
-      const h = ['Fecha','Equipo','Jugador','Atencion','Intensidad','Actitud','NotaEntrenador','Timestamp'];
+      const h = ['Fecha','Equipo','Jugador','Atencion','Intensidad','Actitud','NotaEntrenador','Timestamp','Motivacion'];
       for (let i=0;i<J.length;i++) {
-        await gasPost(ficha, h, [v('va-fecha'),eq,J[i],r(`va-ate-${i}`)||'—',r(`va-int-${i}`)||'—',r(`va-act-${i}`)||'—',v('va-nota'),ts()]);
-        acumularValoracion(J[i], r(`va-ate-${i}`), r(`va-int-${i}`), r(`va-act-${i}`), v('va-fecha'));
+        await gasPost(ficha, h, [v('va-fecha'),eq,J[i],r(`va-ate-${i}`)||'—',r(`va-int-${i}`)||'—',r(`va-act-${i}`)||'—',v('va-nota'),ts(),r(`va-mot-${i}`)||'—']);
+        acumularValoracion(J[i], r(`va-ate-${i}`), r(`va-int-${i}`), r(`va-act-${i}`), v('va-fecha'), r(`va-mot-${i}`));
       }
       // Acumular alineación
       J.forEach((jug,i)=>{
@@ -1864,7 +1874,7 @@ function generarConv() {
   const pres = AS.filter(x => x.e === 'Presente').length, fj = AS.filter(x => x.e === 'Ausente justificada').length, fnj = AS.filter(x => x.e === 'Ausente no justificada').length;
   const totA = pres + fj + fnj, pct = totA ? Math.round(pres / totA * 100) : null;
   const med = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
-  const mA = med(VA.map(x => x.ate)), mI = med(VA.map(x => x.int_)), mC = med(VA.map(x => x.act));
+  const mA = med(VA.map(x => x.ate)), mI = med(VA.map(x => x.int_)), mC = med(VA.map(x => x.act)), mM = med(VA.map(x => x.mot).filter(x => x !== null && x !== undefined && !isNaN(x)));
   const f1 = x => x === null ? '—' : (Math.round(x * 10) / 10).toString().replace('.', ',');
   const dCorto = f => new Date(f + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: '2-digit' });
 
@@ -1908,7 +1918,7 @@ function generarConv() {
       ses.map((d, i) => `<text x="${X(i)}" y="${H + 24}" text-anchor="middle" font-size="8" fill="#374151">${dCorto(d)}</text>`).join('') +
       `<text x="40" y="${H + 38}" font-size="8" fill="${C.azul}">■ Atención</text><text x="110" y="${H + 38}" font-size="8" fill="${C.ambar}">■ Intensidad</text><text x="185" y="${H + 38}" font-size="8" fill="${C.verde}">■ Actitud</text></svg>`;
   };
-  const notas = VA.flatMap(x => [x.ate, x.int_, x.act]).filter(x => x);
+  const notas = VA.flatMap(x => [x.ate, x.int_, x.act, x.mot]).filter(x => x);
   const altas = notas.filter(x => x >= 4).length, medias = notas.filter(x => x === 3).length, bajas = notas.filter(x => x <= 2).length;
   const pctSes = dias.filter(d => AS.some(x => x.f === d)).map(d => { const l = AS.filter(x => x.f === d); return Math.round(l.filter(x => x.e === 'Presente').length / l.length * 100); });
 
@@ -1921,7 +1931,7 @@ function generarConv() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       ${caja('🥧 Asistencia del grupo', donut([pres, fj, fnj], [C.verde, C.ambar, C.rojo], ['Presentes', 'Falta justificada', 'Falta no justificada'], pct === null ? '—' : pct + '%'))}
       ${caja('📊 Asistencia por sesión', barrasV(dias.filter(d => AS.some(x => x.f === d)).map(dCorto), pctSes, 100, C.verde, '%'))}
-      ${caja('⭐ Valoración del grupo (1-5)', barrasH([{ l: 'Atención', v: mA, c: C.azul }, { l: 'Intensidad', v: mI, c: C.ambar }, { l: 'Actitud', v: mC, c: C.verde }]))}
+      ${caja('⭐ Valoración del grupo (1-5)', barrasH([{ l: 'Atención', v: mA, c: C.azul }, { l: 'Intensidad', v: mI, c: C.ambar }, { l: 'Actitud', v: mC, c: C.verde }, { l: 'Motivación', v: mM, c: '#DB2777' }]))}
       ${caja('🥧 Cómo se ha valorado el trabajo', donut([altas, medias, bajas], [C.verdeO, C.ambar, C.rojo], ['Alto (4-5)', 'Medio (3)', 'A mejorar (1-2)'], notas.length ? Math.round(altas / notas.length * 100) + '%' : '—'), 'Porcentaje de valoraciones altas')}
     </div>
     ${caja('📈 Evolución del grupo durante la semana', linea())}`;
@@ -2984,10 +2994,11 @@ function metricasDatos(data, desde, hasta) {
   as.forEach(r => { const x = J(nombreEnPlantilla(r.Jugador)); x.tot++; if (r.Asistencia === 'Presente') x.pres++; });
   const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
   m.ate = media(va.map(r => num(r.Atencion))); m.int = media(va.map(r => num(r.Intensidad))); m.act = media(va.map(r => num(r.Actitud)));
-  m.valGlobal = media([m.ate, m.int, m.act]);
-  va.forEach(r => { const v = media([num(r.Atencion), num(r.Intensidad), num(r.Actitud)]); if (v !== null) J(nombreEnPlantilla(r.Jugador)).val.push(v); });
+  m.motJug = media(va.map(r => num(r.Motivacion)));
+  m.valGlobal = media([m.ate, m.int, m.act, m.motJug]);
+  va.forEach(r => { const v = media([num(r.Atencion), num(r.Intensidad), num(r.Actitud), num(r.Motivacion)]); if (v !== null) J(nombreEnPlantilla(r.Jugador)).val.push(v); });
   const mot = { 'muy alto': 5, 'alto': 4, 'normal': 3, 'bajo': 2, 'muy bajo': 1 }, cli = { 'muy bueno': 5, 'bueno': 4, 'regular': 3, 'tenso': 2 };
-  const cs = sel('ClimaSemana'); m.motivacion = media(cs.map(r => mot[String(r.Motivacion || '').toLowerCase()] || null)); m.clima = media(cs.map(r => cli[String(r.Clima || '').toLowerCase()] || null));
+  const cs = sel('ClimaSemana'); m.motivacion = m.motJug !== null ? m.motJug : media(cs.map(r => mot[String(r.Motivacion || '').toLowerCase()] || null)); m.clima = media(cs.map(r => cli[String(r.Clima || '').toLowerCase()] || null));
   const pts = t => { t = String(t || ''); return /excelente/i.test(t) ? 4 : /muy buena/i.test(t) ? 3 : /buena/i.test(t) ? 2 : /mejorable|regular/i.test(t) ? 1 : null; };
   m.actuacion = media(ultimo(data.Alineacion).map(r => pts(r.Actuacion)));
   m.conflictosE = sel('ConflictoEntreno').length; m.conflictosP = sel('ConflictoPartido').length; m.quejas = sel('Quejas').length;
@@ -3729,7 +3740,7 @@ async function cargarDesdeSheets(equipoId, silencioso) {
     (data.Valoracion || []).filter(nuevo).forEach(reg => {
       const a = parseFloat(reg.Atencion), i = parseFloat(reg.Intensidad), c = parseFloat(reg.Actitud);
       if (!reg.Jugador || isNaN(a) || isNaN(i) || isNaN(c)) return;
-      acumularValoracion(String(reg.Jugador), a, i, c, reg.Fecha); n++;
+      acumularValoracion(String(reg.Jugador), a, i, c, reg.Fecha, reg.Motivacion); n++;
     });
     (data.ConflictoEntreno || []).filter(nuevo).forEach(reg => {
       if (!reg.Jugador) return; acumularConflicto(String(reg.Jugador), reg.Fecha); addDet('ConflictoEntreno', reg); n++;
@@ -3788,11 +3799,11 @@ function acumularAsistencia(jugador, estado, fecha) {
   const reg = { f: f, j: jugador, e: estado };
   if (i >= 0 && f) R.as[i] = reg; else R.as.push(reg);
 }
-function acumularValoracion(jugador, ate, int_, act, fecha) {
+function acumularValoracion(jugador, ate, int_, act, fecha, mot) {
   if (!(ate && int_ && act)) return;
   const R = rawEntreno(), f = String(fecha || '').slice(0, 10);
   const i = R.va.findIndex(x => x.f === f && x.j === jugador);
-  const reg = { f: f, j: jugador, ate: parseFloat(ate), int_: parseFloat(int_), act: parseFloat(act) };
+  const reg = { f: f, j: jugador, ate: parseFloat(ate), int_: parseFloat(int_), act: parseFloat(act), mot: (mot && !isNaN(parseFloat(mot))) ? parseFloat(mot) : null };
   if (i >= 0 && f) R.va[i] = reg; else R.va.push(reg);
 }
 function acumularConflicto(jugador, fecha) {
@@ -3815,7 +3826,7 @@ function reconstruirEntreno() {
   R.as.filter(ok).forEach(x => {
     (RS.asistencia[x.j] = RS.asistencia[x.j] || []).push({ pres: x.e === 'Presente' ? 1 : 0, fj: x.e === 'Ausente justificada' ? 1 : 0, fnj: x.e === 'Ausente no justificada' ? 1 : 0 });
   });
-  R.va.filter(ok).forEach(x => { (RS.valoracion[x.j] = RS.valoracion[x.j] || []).push({ ate: x.ate, int_: x.int_, act: x.act }); });
+  R.va.filter(ok).forEach(x => { (RS.valoracion[x.j] = RS.valoracion[x.j] || []).push({ ate: x.ate, int_: x.int_, act: x.act, mot: x.mot }); });
   R.ce.filter(ok).forEach(x => { RS.conflictos[x.j] = (RS.conflictos[x.j] || 0) + 1; });
   pintarSelectorDia(dias);
 }
@@ -3856,7 +3867,7 @@ function calcularStatsEntreno() {
 
     if (asis.length === 0 && vals.length === 0) {
       set('as','—',null); set('fj','—',null); set('fnj','—',null);
-      set('ate','—',null); set('int','—',null); set('act','—',null); set('med','—',null);
+      set('ate','—',null); set('int','—',null); set('act','—',null); set('mot','—',null); set('med','—',null);
       return;
     }
     hayDatos = true;
@@ -3871,11 +3882,10 @@ function calcularStatsEntreno() {
     const asColor = totFNJ>0?'#991B1B':totFJ>0?'#B45309':totPres>0?'#065F46':'#9CA3AF';
 
     // Valoración acumulada
-    const avg = (k) => vals.length
-      ? (vals.reduce((s,r)=>s+(parseFloat(r[k])||0),0)/vals.length).toFixed(1) : '—';
-    const ateM = avg('ate'), intM = avg('int_'), actM = avg('act');
-    const media = vals.length
-      ? ((parseFloat(ateM)+parseFloat(intM)+parseFloat(actM))/3).toFixed(1) : '—';
+    const avg = (k) => { const v = vals.map(r => parseFloat(r[k])).filter(x => !isNaN(x)); return v.length ? (v.reduce((s,x)=>s+x,0)/v.length).toFixed(1) : '—'; };
+    const ateM = avg('ate'), intM = avg('int_'), actM = avg('act'), motM = avg('mot');
+    const disp = [ateM, intM, actM, motM].filter(x => x !== '—').map(parseFloat);
+    const media = disp.length ? (disp.reduce((s,x)=>s+x,0)/disp.length).toFixed(1) : '—';
     const mColor = media!=='—'
       ? (parseFloat(media)>=4?'#065F46':parseFloat(media)>=2.5?'#B45309':'#991B1B')
       : '#9CA3AF';
@@ -3886,6 +3896,7 @@ function calcularStatsEntreno() {
     set('ate', ateM,  ateM !=='—'?'#2563EB':'#9CA3AF');
     set('int', intM,  intM !=='—'?'#D97706':'#9CA3AF');
     set('act', actM,  actM !=='—'?'#065F46':'#9CA3AF');
+    set('mot', motM,  motM !=='—'?'#DB2777':'#9CA3AF');
     set('med', media, mColor);
   });
   if (!isNefta) { /* los entrenadores no ven stats */ }
@@ -3965,7 +3976,10 @@ function generarGraficosStats() {
   const ate  = J.map(j=>avg(j,'ate'));
   const int_ = J.map(j=>avg(j,'int_'));
   const act  = J.map(j=>avg(j,'act'));
-  const medias = J.map((_,i)=>(ate[i]&&int_[i]&&act[i])?+((ate[i]+int_[i]+act[i])/3).toFixed(1):null);
+  const avgMot=(j)=>{const v=(_registrosSemana.valoracion[j]||[]).map(r=>r.mot).filter(x=>x!==null&&x!==undefined&&!isNaN(x));return v.length?+(v.reduce((s,x)=>s+x,0)/v.length).toFixed(1):null;};
+  const mot  = J.map(j=>avgMot(j));
+  const medias = J.map((_,i)=>{const d=[ate[i],int_[i],act[i],mot[i]].filter(x=>x!==null&&x!==undefined);return d.length?+(d.reduce((s,x)=>s+x,0)/d.length).toFixed(1):null;});
+  const mMot=mot.filter(x=>x!==null).reduce((s,v,_,a)=>s+v/a.length,0);
   const mAte=ate.filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
   const mInt=int_.filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
   const mAct=act.filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
@@ -4006,6 +4020,7 @@ function generarGraficosStats() {
       {label:'Atención',  data:ate,  backgroundColor:'#3FB4C6',borderRadius:3},
       {label:'Intensidad',data:int_, backgroundColor:'#D97706',borderRadius:3},
       {label:'Actitud',   data:act,  backgroundColor:'#5E9E2F',borderRadius:3},
+      {label:'Motivación',data:mot,  backgroundColor:'#DB2777',borderRadius:3},
     ]},
     options:{...cfg,
       plugins:{legend:{position:'top',labels:{font:{size:10}}},
@@ -4038,12 +4053,12 @@ function generarGraficosStats() {
   const nV=ate.filter(Boolean).length;
   window._chRadar = new Chart(document.getElementById('chart-radar').getContext('2d'),{
     type:'radar',
-    data:{labels:['Atención','Intensidad','Actitud'],datasets:[
-      {label:'Grupo ('+((mAte+mInt+mAct)/3).toFixed(1)+'/5)',
-       data:nV?[+mAte.toFixed(1),+mInt.toFixed(1),+mAct.toFixed(1)]:[0,0,0],
+    data:{labels:['Atención','Intensidad','Actitud','Motivación'],datasets:[
+      {label:'Grupo ('+(mMot?(mAte+mInt+mAct+mMot)/4:(mAte+mInt+mAct)/3).toFixed(1)+'/5)',
+       data:nV?[+mAte.toFixed(1),+mInt.toFixed(1),+mAct.toFixed(1),+mMot.toFixed(1)]:[0,0,0,0],
        backgroundColor:'rgba(37,99,235,0.15)',borderColor:'#3FB4C6',borderWidth:2.5,
        pointBackgroundColor:'#fff',pointBorderColor:'#3FB4C6',pointBorderWidth:2.5},
-      {label:'Ref. 4.0',data:[4,4,4],
+      {label:'Ref. 4.0',data:[4,4,4,4],
        backgroundColor:'rgba(156,163,175,0.05)',borderColor:'#5B6170',
        borderWidth:1.5,borderDash:[6,4],pointRadius:0}
     ]},
@@ -4054,7 +4069,7 @@ function generarGraficosStats() {
                title:{display:true,text:'Perfil grupal del equipo',font:{size:12,weight:'bold'},color:'#4F5664'}}}
   });
 
-  window._statsParaPDF = {J,pres,fj,fnj,ate,int_,act,medias};
+  window._statsParaPDF = {J,pres,fj,fnj,ate,int_,act,mot,medias};
   if (isNefta) mostrarStatsIndividuales();
   toast('✅ Gráficos generados');
 }
